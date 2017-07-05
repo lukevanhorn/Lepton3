@@ -22,12 +22,12 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
- /*
- 	July 2017
- 	Modified by Luke Van Horn for Lepton 3
-	
-	Use and modify as you please. 
+
+
+*******************************************
+July 2017
+Modified by Luke Van Horn for Lepton 3
+ 
  */
 
 
@@ -53,7 +53,7 @@ static void pabort(const char *s)
 static const char *device = "/dev/spidev0.1";
 static uint8_t mode;
 static uint8_t bits = 8;
-static uint32_t speed = 16000000;
+static uint32_t speed = 20000000;
 static uint16_t delay;
 
 volatile uint8_t total = 0;
