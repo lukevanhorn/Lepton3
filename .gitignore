@@ -1,0 +1,7 @@
+.DS_Store
+Debug
+*.o
+*.pgm
+raspberrypi_capture
+control
+

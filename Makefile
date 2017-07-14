@@ -2,15 +2,12 @@
 TARGET = raspberrypi_capture
 LIBS = -lm
 CC = gcc
-CFLAGS = -g -Wall -L./libs/Debug
-INCPATH = -I. -I./libs 
+CFLAGS = -g -Wall
 
 .PHONY: default all clean
 
 default: $(TARGET)
-all: sdk default
-
-sdk: make -C ./libs
+all: default
 
 OBJECTS = $(patsubst %.c, %.o, $(wildcard *.c))
 HEADERS = $(wildcard *.h)
@@ -26,8 +23,6 @@ $(TARGET): $(OBJECTS)
 clean:
 	-rm -f *.o
 	-rm -f $(TARGET)
-	-rm -f ./libs/*.o  
-	-rm -f ./libs/Debug/*.*
 	
 	
 
