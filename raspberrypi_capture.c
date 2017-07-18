@@ -42,6 +42,7 @@ Modified by Luke Van Horn for Lepton 3
 #include <linux/spi/spidev.h>
 #include <limits.h>
 #include <string.h>
+#include <time.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
@@ -55,7 +56,7 @@ static const char *device = "/dev/spidev0.1";
 static uint8_t mode = 3;
 static uint8_t bits = 8;
 static uint32_t speed = 20000000;
-static uint16_t delay = 0;
+static uint16_t delay = 65535;
 
 int8_t last_packet = -1;
 uint8_t current_segment = 1;
@@ -65,10 +66,10 @@ int total = 0;
 int valid = 0;
 
 #define VOSPI_FRAME_SIZE (164)
-#define LEP_SPI_BUFFER (9840)
+#define LEP_SPI_BUFFER (39360)
 
 uint8_t lepton_frame_packet[VOSPI_FRAME_SIZE] = {0};
-static uint8_t rx_buf[LEP_SPI_BUFFER] = {0};
+uint8_t rx_buf[LEP_SPI_BUFFER] = {0};
 static unsigned int lepton_image[240][80];
 
 static void save_pgm_file(void)
@@ -259,6 +260,8 @@ int main(int argc, char *argv[])
 	printf("spi mode: %d\n", mode);
 	printf("bits per word: %d\n", bits);
 	printf("max speed: %d Hz (%d KHz)\n", speed, speed/1000);
+    
+    sleep(.2);  
     
 	while(total != 240) { transfer(fd); }
 	
