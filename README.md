@@ -6,7 +6,6 @@ Defaults to SPI channel 1 - update the "/dev/spidev0.1" value accordingly
 
 Build with 'make'
 
-
 Increase the spidev buffer size by adding "spidev.buffer=32768" to /boot/cmdline.txt
 
 Steps: 
