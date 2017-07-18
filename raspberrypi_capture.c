@@ -53,9 +53,9 @@ static void pabort(const char *s)
 }
 
 static const char *device = "/dev/spidev0.1";
-static uint8_t mode = 3;
+static uint8_t mode = SPI_CPOL | SPI_CPHA;
 static uint8_t bits = 8;
-static uint32_t speed = 20000000;
+static uint32_t speed = 16000000;
 static uint16_t delay = 65535;
 
 int8_t last_packet = -1;
@@ -150,7 +150,7 @@ int transfer(int fd)
     uint8_t segment = 0;
     
     struct spi_ioc_transfer tr = {
-        .tx_buf = (unsigned long)rx_buf,
+        .tx_buf = NULL,
         .rx_buf = (unsigned long)rx_buf,
         .len = LEP_SPI_BUFFER,
         .delay_usecs = delay,
@@ -200,11 +200,11 @@ int transfer(int fd)
         
         valid++;
         
-    if(packet_number == 59) {
-        current_segment += 1;
-        last_packet = -1;
-        //printf("total: %d, valid: %d, discarded: %d, packet_number: %d, last_packet: %d, segment: %d, current_segment: %d\n", total, valid, discarded, packet_number, last_packet, segment, current_segment);
-    }
+        if(packet_number == 59) {
+            current_segment += 1;
+            last_packet = -1;
+            //printf("total: %d, valid: %d, discarded: %d, packet_number: %d, last_packet: %d, segment: %d, current_segment: %d\n", total, valid, discarded, packet_number, last_packet, segment, current_segment);
+        }
     }
     
     return total;
