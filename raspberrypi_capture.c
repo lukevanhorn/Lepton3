@@ -41,6 +41,7 @@ Modified by Luke Van Horn for Lepton 3
 #include <linux/types.h>
 #include <linux/spi/spidev.h>
 #include <limits.h>
+#include <string.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
@@ -51,18 +52,24 @@ static void pabort(const char *s)
 }
 
 static const char *device = "/dev/spidev0.1";
-static uint8_t mode;
+static uint8_t mode = 3;
 static uint8_t bits = 8;
 static uint32_t speed = 20000000;
-static uint16_t delay;
+static uint16_t delay = 0;
 
-volatile uint8_t total = 0;
+int8_t last_packet = -1;
+uint8_t current_segment = 1;
+
+int discarded = 0;
+int total = 0;
+int valid = 0;
 
 #define VOSPI_FRAME_SIZE (164)
-uint8_t lepton_frame_packet[VOSPI_FRAME_SIZE];
+#define LEP_SPI_BUFFER (9840)
+
+uint8_t lepton_frame_packet[VOSPI_FRAME_SIZE] = {0};
+static uint8_t rx_buf[LEP_SPI_BUFFER] = {0};
 static unsigned int lepton_image[240][80];
-static unsigned int packet_segment[60][81];
-static unsigned int frame_segments[4] = {0,0,0,0};
 
 static void save_pgm_file(void)
 {
@@ -74,7 +81,7 @@ static void save_pgm_file(void)
 	int image_index = 0;
 
 	do {
-		sprintf(image_name, "IMG_%.4d.pgm", image_index);
+		sprintf(image_name, "images/IMG_%.4d.pgm", image_index);
 		image_index += 1;
 		if (image_index > 9999) 
 		{
@@ -95,8 +102,6 @@ static void save_pgm_file(void)
 	for(i = 0; i < 240; i++)
 	{
 		
-		//printf("index %d, frame: %d segment: %d\n", i, headers[i][0], headers[i][1]);
-
 		for(j = 0; j < 80; j++)
 		{
 			if (lepton_image[i][j] > maxval) {
@@ -131,88 +136,82 @@ static void save_pgm_file(void)
 	fclose(f);
 
 	//launch image viewer
-	execlp("gpicview", image_name, NULL);
+	//execlp("gpicview", image_name, NULL);
 }
 
 int transfer(int fd)
 {
 	int ret;
 	int i;
+	int ip;
 	uint8_t packet_number = 0;
-
-	uint8_t tx[VOSPI_FRAME_SIZE] = {0, };
+	uint8_t segment = 0;
+	
 	struct spi_ioc_transfer tr = {
-		.tx_buf = (unsigned long)tx,
-		.rx_buf = (unsigned long)lepton_frame_packet,
-		.len = VOSPI_FRAME_SIZE,
+		.tx_buf = (unsigned long)rx_buf,
+		.rx_buf = (unsigned long)rx_buf,
+		.len = LEP_SPI_BUFFER,
 		.delay_usecs = delay,
 		.speed_hz = speed,
-		.bits_per_word = bits,
-	};
-
+		.bits_per_word = bits
+	};	
+    
 	ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
-	if (ret < 1)
-		pabort("can't send spi message");
+	if (ret < 1) {
+		pabort("can't read spi data");
+    }
+    
+    for(ip = 0; ip < (LEP_SPI_BUFFER / 164); ip++) {
+        memcpy(lepton_frame_packet, &rx_buf[ip * VOSPI_FRAME_SIZE], VOSPI_FRAME_SIZE);
 
-	if(((lepton_frame_packet[0]&0xf) != 0x0f))
-	{		
-		packet_number = lepton_frame_packet[1];
+    	if((lepton_frame_packet[0] & 0x0f) == 0x0f) {
+    	    discarded++;
+    	    continue;
+    	}
+    	
+    	packet_number = lepton_frame_packet[1];
+    	if(packet_number != (last_packet + 1)) {
+    	    continue;
+    	}
+    	
+    	last_packet = (int8_t)packet_number;
+    	
+    	if(packet_number == 20) {
+    	    segment = ((lepton_frame_packet[0] & 0x70) >> 4);
+        	if(segment != current_segment) {
+        	    //printf("invalid segment: total: %d, valid: %d, discarded: %d, last_packet: %d, segment: %d, current_segment: %d\n", total, valid, discarded, last_packet, segment, current_segment);
+        		last_packet = -1;
+        		current_segment = 1;
+        		total = 0;
+        		continue;
+        	} 
+        	
+        	//printf("valid segment: total: %d, valid: %d, discarded: %d, last_packet: %d, segment: %d, current_segment: %d\n", total, valid, discarded, last_packet, segment, current_segment);
 
-		if(packet_number < 60)
-		{
-			//store the segment
-			packet_segment[packet_number][0] = ((lepton_frame_packet[0] & 0x70) >> 4);
-			//printf("%d-%d ", packet_number, packet_segment[packet_number][0]);			
-
-			for(i = 0; i < 80; i++)
-			{
-				packet_segment[packet_number][i + 1] = (lepton_frame_packet[2*i+4] << 8 | lepton_frame_packet[2*i+5]);
-			}
-		}
-	}
-	return packet_number;
-}
-
-int process_segment() {
-
-	int i;
-	int j;
-	uint8_t segment;
-	uint8_t index;
-
-	segment = packet_segment[20][0];
-	
-	//printf("process segment: %d\n", segment);
-
-	if(!segment || segment > 4 || frame_segments[segment - 1] == 1) {
-		printf("Skipping segment: %d\n", segment);
-		return total;
-	}
-
-	//mark as processed
-	frame_segments[segment - 1] = 1;
-	
-	for(i = 0; i < 60; i++) {
-
-		index = ((segment - 1) * 60) + i;
-		
-		total++;
-
-		//printf("packet: %d segment: %d index: %d total: %d\n", i, segment, index, total);
-
-		packet_segment[i][0] = 0;  //reset value for next segment
-		for(j = 0; j < 80; j++)
-		{
-			lepton_image[index][j] = packet_segment[i][j + 1];
-			packet_segment[i][j + 1] = 0;  //reset value
-		}
-	}
+    	}
+    
+    	total = (packet_number + 1) + ((current_segment - 1) * 60);
+        	
+    	for(i = 0; i < 80; i++)
+    	{
+    		lepton_image[total - 1][i] = (lepton_frame_packet[(2*i)+4] << 8 | lepton_frame_packet[(2*i)+5]);
+    	}
+    	
+    	valid++;
+    	
+    	if(packet_number == 59) {
+    	    current_segment += 1;
+    	    last_packet = -1;
+    	    //printf("total: %d, valid: %d, discarded: %d, packet_number: %d, last_packet: %d, segment: %d, current_segment: %d\n", total, valid, discarded, packet_number, last_packet, segment, current_segment);
+    	}
+    }
+    
 	return total;
 }
  
 int main(int argc, char *argv[])
 {
-	int ret = 0;
+    int i, ret = 0;
 	int fd;
 
 	fd = open(device, O_RDWR);
@@ -260,12 +259,11 @@ int main(int argc, char *argv[])
 	printf("spi mode: %d\n", mode);
 	printf("bits per word: %d\n", bits);
 	printf("max speed: %d Hz (%d KHz)\n", speed, speed/1000);
-
-	while(total != 240) {
-		while(transfer(fd) != 59) {}
-		process_segment();
-	}
-
+    
+	while(total != 240) { transfer(fd); }
+	
+    printf("total: %d, valid: %d, discarded: %d\n", total, valid, discarded);
+	
 	close(fd);
 
 	save_pgm_file();
