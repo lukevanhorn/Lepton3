@@ -196,6 +196,14 @@ int transfer(int fd)
         for(i = 0; i < 80; i++)
         {
             lepton_image[total - 1][i] = (lepton_frame_packet[(2*i)+4] << 8 | lepton_frame_packet[(2*i)+5]);
+            /* look for zero data */
+            if(!lepton_image[total - 1][i]) {
+                printf("Invalid values. Resetting.\n");
+                last_packet = -1;
+                current_segment = 1;
+                total = 0;
+                return total;
+            }
         }
         
         valid++;
