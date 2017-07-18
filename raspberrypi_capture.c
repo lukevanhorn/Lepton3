@@ -150,7 +150,7 @@ int transfer(int fd)
     uint8_t segment = 0;
     
     struct spi_ioc_transfer tr = {
-        .tx_buf = NULL,
+        .tx_buf = (unsigned long)NULL,
         .rx_buf = (unsigned long)rx_buf,
         .len = LEP_SPI_BUFFER,
         .delay_usecs = delay,
