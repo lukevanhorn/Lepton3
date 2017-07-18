@@ -48,8 +48,8 @@ Modified by Luke Van Horn for Lepton 3
 
 static void pabort(const char *s)
 {
-	perror(s);
-	abort();
+    perror(s);
+    abort();
 }
 
 static const char *device = "/dev/spidev0.1";
@@ -66,210 +66,210 @@ int total = 0;
 int valid = 0;
 
 #define VOSPI_FRAME_SIZE (164)
-#define LEP_SPI_BUFFER (39360)
+#define LEP_SPI_BUFFER (9840)
 
 uint8_t lepton_frame_packet[VOSPI_FRAME_SIZE] = {0};
 uint8_t rx_buf[LEP_SPI_BUFFER] = {0};
+uint8_t tx_buf[LEP_SPI_BUFFER] = {0};
 static unsigned int lepton_image[240][80];
+int image_index = 0;
 
 static void save_pgm_file(void)
 {
-	int i;
-	int j;
-	unsigned int maxval = 0;
-	unsigned int minval = UINT_MAX;
-	char image_name[32];
-	int image_index = 0;
+    int i;
+    int j;
+    unsigned int maxval = 0;
+    unsigned int minval = UINT_MAX;
+    char image_name[32];
 
-	do {
-		sprintf(image_name, "images/IMG_%.4d.pgm", image_index);
-		image_index += 1;
-		if (image_index > 9999) 
-		{
-			image_index = 0;
-			break;
-		}
+    do {
+        sprintf(image_name, "images/IMG_%.4d.pgm", image_index);
+        image_index += 1;
+        if (image_index > 9999) 
+        {
+            image_index = 0;
+            break;
+        }
 
-	} while (access(image_name, F_OK) == 0);
+    } while (access(image_name, F_OK) == 0);
 
-	FILE *f = fopen(image_name, "w");
-	if (f == NULL)
-	{
-		printf("Error opening file!\n");
-		exit(1);
-	}
+    FILE *f = fopen(image_name, "w+");
+    if (f == NULL)
+    {
+        printf("Error opening file!\n");
+        exit(1);
+    }
 
-	printf("Calculating min/max values for proper scaling...\n");
-	for(i = 0; i < 240; i++)
-	{
-		
-		for(j = 0; j < 80; j++)
-		{
-			if (lepton_image[i][j] > maxval) {
-				maxval = lepton_image[i][j];
-			}
-			if (lepton_image[i][j] < minval) {
-				minval = lepton_image[i][j];
-			}
-		}
-	}
-	printf("maxval = %u\n",maxval);
-	printf("minval = %u\n",minval);
-	
-	fprintf(f,"P2\n160 120\n%u\n",maxval-minval);
-	for(i=0; i < 240; i += 2)
-	{
-		/* first 80 pixels in row */
-		for(j = 0; j < 80; j++)
-		{
-			fprintf(f,"%d ", lepton_image[i][j] - minval);
-		}
+    printf("Calculating min/max values for proper scaling...\n");
+    for(i = 0; i < 240; i++)
+    {
+        
+        for(j = 0; j < 80; j++)
+        {
+            if (lepton_image[i][j] > maxval) {
+                maxval = lepton_image[i][j];
+            }
+            if (lepton_image[i][j] < minval) {
+                minval = lepton_image[i][j];
+            }
+        }
+    }
+    printf("maxval = %u\n",maxval);
+    printf("minval = %u\n",minval);
+    
+    fprintf(f,"P2\n160 120\n%u\n",maxval-minval);
+    for(i=0; i < 240; i += 2)
+    {
+        /* first 80 pixels in row */
+        for(j = 0; j < 80; j++)
+        {
+            fprintf(f,"%d ", lepton_image[i][j] - minval);
+        }
 
-		/* second 80 pixels in row */
-		for(j = 0; j < 80; j++)
-		{
-			fprintf(f,"%d ", lepton_image[i + 1][j] - minval);
-		}		
-		fprintf(f,"\n");
-	}
-	fprintf(f,"\n\n");
+        /* second 80 pixels in row */
+        for(j = 0; j < 80; j++)
+        {
+            fprintf(f,"%d ", lepton_image[i + 1][j] - minval);
+        }        
+        fprintf(f,"\n");
+    }
+    fprintf(f,"\n\n");
 
-	fclose(f);
+    fclose(f);
 
-	//launch image viewer
-	//execlp("gpicview", image_name, NULL);
+    //launch image viewer
+    //execlp("gpicview", image_name, NULL);
 }
 
 int transfer(int fd)
 {
-	int ret;
-	int i;
-	int ip;
-	uint8_t packet_number = 0;
-	uint8_t segment = 0;
-	
-	struct spi_ioc_transfer tr = {
-		.tx_buf = (unsigned long)rx_buf,
-		.rx_buf = (unsigned long)rx_buf,
-		.len = LEP_SPI_BUFFER,
-		.delay_usecs = delay,
-		.speed_hz = speed,
-		.bits_per_word = bits
-	};	
+    int ret;
+    int i;
+    int ip;
+    uint8_t packet_number = 0;
+    uint8_t segment = 0;
     
-	ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
-	if (ret < 1) {
-		pabort("can't read spi data");
+    struct spi_ioc_transfer tr = {
+        .tx_buf = (unsigned long)rx_buf,
+        .rx_buf = (unsigned long)rx_buf,
+        .len = LEP_SPI_BUFFER,
+        .delay_usecs = delay,
+        .speed_hz = speed,
+        .bits_per_word = bits
+    };    
+    
+    ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
+    if (ret < 1) {
+        pabort("can't read spi data");
     }
     
     for(ip = 0; ip < (LEP_SPI_BUFFER / 164); ip++) {
         memcpy(lepton_frame_packet, &rx_buf[ip * VOSPI_FRAME_SIZE], VOSPI_FRAME_SIZE);
 
-    	if((lepton_frame_packet[0] & 0x0f) == 0x0f) {
-    	    discarded++;
-    	    continue;
-    	}
-    	
-    	packet_number = lepton_frame_packet[1];
-    	if(packet_number != (last_packet + 1)) {
-    	    continue;
-    	}
-    	
-    	last_packet = (int8_t)packet_number;
-    	
-    	if(packet_number == 20) {
-    	    segment = ((lepton_frame_packet[0] & 0x70) >> 4);
-        	if(segment != current_segment) {
-        	    //printf("invalid segment: total: %d, valid: %d, discarded: %d, last_packet: %d, segment: %d, current_segment: %d\n", total, valid, discarded, last_packet, segment, current_segment);
-        		last_packet = -1;
-        		current_segment = 1;
-        		total = 0;
-        		continue;
-        	} 
-        	
-        	//printf("valid segment: total: %d, valid: %d, discarded: %d, last_packet: %d, segment: %d, current_segment: %d\n", total, valid, discarded, last_packet, segment, current_segment);
+        if((lepton_frame_packet[0] & 0x0f) == 0x0f) {
+            continue;
+        }
+        
+        packet_number = lepton_frame_packet[1];
+        if(packet_number != (last_packet + 1)) {
+            continue;
+        }
+        
+        last_packet = (int8_t)packet_number;
+        
+        if(packet_number == 20) {
+            segment = ((lepton_frame_packet[0] & 0x70) >> 4);
+            if(segment != current_segment) {
+                //printf("invalid segment: total: %d, valid: %d, discarded: %d, last_packet: %d, segment: %d, current_segment: %d\n", total, valid, discarded, last_packet, segment, current_segment);
+                last_packet = -1;
+                current_segment = 1;
+                total = 0;
+                continue;
+            } 
+            
+            //printf("valid segment: total: %d, valid: %d, discarded: %d, last_packet: %d, segment: %d, current_segment: %d\n", total, valid, discarded, last_packet, segment, current_segment);
 
-    	}
+        }
     
-    	total = (packet_number + 1) + ((current_segment - 1) * 60);
-        	
-    	for(i = 0; i < 80; i++)
-    	{
-    		lepton_image[total - 1][i] = (lepton_frame_packet[(2*i)+4] << 8 | lepton_frame_packet[(2*i)+5]);
-    	}
-    	
-    	valid++;
-    	
-    	if(packet_number == 59) {
-    	    current_segment += 1;
-    	    last_packet = -1;
-    	    //printf("total: %d, valid: %d, discarded: %d, packet_number: %d, last_packet: %d, segment: %d, current_segment: %d\n", total, valid, discarded, packet_number, last_packet, segment, current_segment);
-    	}
+        total = (packet_number + 1) + ((current_segment - 1) * 60);
+            
+        for(i = 0; i < 80; i++)
+        {
+            lepton_image[total - 1][i] = (lepton_frame_packet[(2*i)+4] << 8 | lepton_frame_packet[(2*i)+5]);
+        }
+        
+        valid++;
+        
+    if(packet_number == 59) {
+        current_segment += 1;
+        last_packet = -1;
+        //printf("total: %d, valid: %d, discarded: %d, packet_number: %d, last_packet: %d, segment: %d, current_segment: %d\n", total, valid, discarded, packet_number, last_packet, segment, current_segment);
+    }
     }
     
-	return total;
+    return total;
 }
  
 int main(int argc, char *argv[])
 {
     int ret = 0;
-	int fd;
+    int fd;
 
-	fd = open(device, O_RDWR);
-	if (fd < 0)
-	{
-		pabort("can't open device");
-	}
+    fd = open(device, O_RDWR);
+    if (fd < 0)
+    {
+        pabort("can't open device");
+    }
 
-	ret = ioctl(fd, SPI_IOC_WR_MODE, &mode);
-	if (ret == -1)
-	{
-		pabort("can't set spi mode");
-	}
+    ret = ioctl(fd, SPI_IOC_WR_MODE, &mode);
+    if (ret == -1)
+    {
+        pabort("can't set spi mode");
+    }
 
-	ret = ioctl(fd, SPI_IOC_RD_MODE, &mode);
-	if (ret == -1)
-	{
-		pabort("can't get spi mode");
-	}
+    ret = ioctl(fd, SPI_IOC_RD_MODE, &mode);
+    if (ret == -1)
+    {
+        pabort("can't get spi mode");
+    }
 
-	ret = ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &bits);
-	if (ret == -1)
-	{
-		pabort("can't set bits per word");
-	}
+    ret = ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &bits);
+    if (ret == -1)
+    {
+        pabort("can't set bits per word");
+    }
 
-	ret = ioctl(fd, SPI_IOC_RD_BITS_PER_WORD, &bits);
-	if (ret == -1)
-	{
-		pabort("can't get bits per word");
-	}
+    ret = ioctl(fd, SPI_IOC_RD_BITS_PER_WORD, &bits);
+    if (ret == -1)
+    {
+        pabort("can't get bits per word");
+    }
 
-	ret = ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
-	if (ret == -1)
-	{
-		pabort("can't set max speed hz");
-	}
+    ret = ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
+    if (ret == -1)
+    {
+        pabort("can't set max speed hz");
+    }
 
-	ret = ioctl(fd, SPI_IOC_RD_MAX_SPEED_HZ, &speed);
-	if (ret == -1)
-	{
-		pabort("can't get max speed hz");
-	}
+    ret = ioctl(fd, SPI_IOC_RD_MAX_SPEED_HZ, &speed);
+    if (ret == -1)
+    {
+        pabort("can't get max speed hz");
+    }
 
-	printf("spi mode: %d\n", mode);
-	printf("bits per word: %d\n", bits);
-	printf("max speed: %d Hz (%d KHz)\n", speed, speed/1000);
+    printf("spi mode: %d\n", mode);
+    printf("bits per word: %d\n", bits);
+    printf("max speed: %d Hz (%d KHz)\n", speed, speed/1000);
     
-    sleep(1);  
+    sleep(.2);  
     
-	while(total != 240) { transfer(fd); }
-	
-    printf("total: %d, valid: %d, discarded: %d\n", total, valid, discarded);
-	
-	close(fd);
+    while(total != 240) { transfer(fd); }
+    
+    printf("total: %d, valid: %d\n", total, valid);
+    
+    close(fd);
 
-	save_pgm_file();
+    save_pgm_file();
 
-	return ret;
+    return ret;
 }
