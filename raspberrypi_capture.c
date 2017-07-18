@@ -211,7 +211,7 @@ int transfer(int fd)
  
 int main(int argc, char *argv[])
 {
-    int i, ret = 0;
+    int ret = 0;
 	int fd;
 
 	fd = open(device, O_RDWR);
