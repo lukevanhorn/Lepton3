@@ -261,7 +261,7 @@ int main(int argc, char *argv[])
 	printf("bits per word: %d\n", bits);
 	printf("max speed: %d Hz (%d KHz)\n", speed, speed/1000);
     
-    sleep(.2);  
+    sleep(1);  
     
 	while(total != 240) { transfer(fd); }
 	
