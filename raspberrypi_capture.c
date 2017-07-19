@@ -217,7 +217,7 @@ int transfer(int fd)
         for(i = 4; i < VOSPI_FRAME_SIZE; i+=2)
         {
             pixel = packet_number + ((current_segment - 1) * 60);
-            lepton_image[pixel][(i - 4) / 2] = (rx_buf[packet + 1] << 8 | rx_buf[packet + (i + 1)]);
+            lepton_image[pixel][(i - 4) / 2] = (rx_buf[packet + i] << 8 | rx_buf[packet + (i + 1)]);
         }
         
         if(packet_number == 59) {
