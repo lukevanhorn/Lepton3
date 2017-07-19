@@ -1,4 +1,19 @@
 /*
+
+ * Original code modified from SPI testing utility (using spidev driver)
+ *
+ * Copyright (c) 2007  MontaVista Software, Inc.
+ * Copyright (c) 2007  Anton Vorontsov <avorontsov@ru.mvista.com>
+
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License.
+ *
+ * Cross-compile with cross-gcc -I/path/to/cross-kernel/include
+
+****************************************
+Modified for Lepton by:
+
 Copyright (c) 2014, Pure Engineering LLC
 All rights reserved.
 
@@ -28,6 +43,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 July 2017
 Modified by Luke Van Horn for Lepton 3
  
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License.
+
  */
 
 
@@ -57,22 +76,16 @@ static uint8_t mode = SPI_CPOL | SPI_CPHA;
 static uint8_t bits = 8;
 static uint32_t speed = 16000000;
 static uint16_t delay = 65535;
+static uint8_t status_bits = 0;
 
 int8_t last_packet = -1;
-uint8_t current_segment = 1;
-
-int discarded = 0;
-int total = 0;
-int valid = 0;
 
 #define VOSPI_FRAME_SIZE (164)
-#define LEP_SPI_BUFFER (9840)
+#define LEP_SPI_BUFFER (118080) //(118080)39360
+/* modify /boot/cmdline.txt to include spidev.bufsiz=131072 */
 
-uint8_t lepton_frame_packet[VOSPI_FRAME_SIZE] = {0};
-uint8_t rx_buf[LEP_SPI_BUFFER] = {0};
-uint8_t tx_buf[LEP_SPI_BUFFER] = {0};
+static uint8_t rx_buf[LEP_SPI_BUFFER] = {0};
 static unsigned int lepton_image[240][80];
-int image_index = 0;
 
 static void save_pgm_file(void)
 {
@@ -81,6 +94,7 @@ static void save_pgm_file(void)
     unsigned int maxval = 0;
     unsigned int minval = UINT_MAX;
     char image_name[32];
+    int image_index = 0;
 
     do {
         sprintf(image_name, "images/IMG_%.4d.pgm", image_index);
@@ -148,6 +162,10 @@ int transfer(int fd)
     int ip;
     uint8_t packet_number = 0;
     uint8_t segment = 0;
+    uint8_t current_segment = 0;
+    int packet = 0;
+    int state = 0;  //set to 1 when a valid segment is found
+    int pixel = 0;
     
     struct spi_ioc_transfer tr = {
         .tx_buf = (unsigned long)NULL,
@@ -163,61 +181,52 @@ int transfer(int fd)
         pabort("can't read spi data");
     }
     
-    for(ip = 0; ip < (LEP_SPI_BUFFER / 164); ip++) {
-        memcpy(lepton_frame_packet, &rx_buf[ip * VOSPI_FRAME_SIZE], VOSPI_FRAME_SIZE);
+    for(ip = 0; ip < (ret / VOSPI_FRAME_SIZE); ip++) {
+        packet = ip * VOSPI_FRAME_SIZE;
 
-        if((lepton_frame_packet[0] & 0x0f) == 0x0f) {
+        //check for invalid packet number
+        if((rx_buf[packet] & 0x0f) == 0x0f) {
+            state = 0;
+            continue;
+        }
+
+        packet_number = rx_buf[packet + 1];
+        
+        if(packet_number > 0 && state == 0) {
             continue;
         }
         
-        packet_number = lepton_frame_packet[1];
-        if(packet_number != (last_packet + 1)) {
-            continue;
+        if(state == 1 && packet_number == 0) {
+            state = 0;  //reset for new segment
         }
         
-        last_packet = (int8_t)packet_number;
-        
-        if(packet_number == 20) {
-            segment = ((lepton_frame_packet[0] & 0x70) >> 4);
-            if(segment != current_segment) {
-                //printf("invalid segment: total: %d, valid: %d, discarded: %d, last_packet: %d, segment: %d, current_segment: %d\n", total, valid, discarded, last_packet, segment, current_segment);
-                last_packet = -1;
-                current_segment = 1;
-                total = 0;
-                continue;
+        //look for the start of a segment
+        if(state == 0 && packet_number == 0 && (packet + (20 * VOSPI_FRAME_SIZE)) < ret) {
+            segment = (rx_buf[packet + (20 * VOSPI_FRAME_SIZE)] & 0x70) >> 4;
+            if(segment > 0 && segment < 5 && rx_buf[packet + (20 * VOSPI_FRAME_SIZE) + 1] == 20) {
+                state = 1;
+                current_segment = segment;
+                printf("new segment: %x \n", segment);
             } 
-            
-            //printf("valid segment: total: %d, valid: %d, discarded: %d, last_packet: %d, segment: %d, current_segment: %d\n", total, valid, discarded, last_packet, segment, current_segment);
-
-        }
-    
-        total = (packet_number + 1) + ((current_segment - 1) * 60);
-            
-        for(i = 0; i < 80; i++)
-        {
-            lepton_image[total - 1][i] = (lepton_frame_packet[(2*i)+4] << 8 | lepton_frame_packet[(2*i)+5]);
-            /* look for zero data */
-            /*
-            if(!lepton_image[total - 1][i]) {
-                printf("Invalid values. Resetting.\n");
-                last_packet = -1;
-                current_segment = 1;
-                total = 0;
-                return total;
-            }
-            */
         }
         
-        valid++;
+        if(!state) {
+            continue;
+        }
+
+        for(i = 4; i < VOSPI_FRAME_SIZE; i+=2)
+        {
+            pixel = packet_number + ((current_segment - 1) * 60);
+            lepton_image[pixel][(i - 4) / 2] = (rx_buf[packet + 1] << 8 | rx_buf[packet + (i + 1)]);
+        }
         
         if(packet_number == 59) {
-            current_segment += 1;
-            last_packet = -1;
-            //printf("total: %d, valid: %d, discarded: %d, packet_number: %d, last_packet: %d, segment: %d, current_segment: %d\n", total, valid, discarded, packet_number, last_packet, segment, current_segment);
-        }
+            //set the segment status bit
+            status_bits |= ( 0x01 << (current_segment - 1));
+        }        
     }
     
-    return total;
+    return status_bits;
 }
  
 int main(int argc, char *argv[])
@@ -270,13 +279,9 @@ int main(int argc, char *argv[])
     printf("spi mode: %d\n", mode);
     printf("bits per word: %d\n", bits);
     printf("max speed: %d Hz (%d KHz)\n", speed, speed/1000);
-    
-    sleep(.2);  
-    
-    while(total != 240) { transfer(fd); }
-    
-    printf("total: %d, valid: %d\n", total, valid);
-    
+
+    while(status_bits != 0x0f) { transfer(fd); }
+
     close(fd);
 
     save_pgm_file();
