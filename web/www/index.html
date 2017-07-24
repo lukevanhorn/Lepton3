@@ -1,0 +1,29 @@
+<!DOCTYPE>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>Lepton Web UI</title>
+		<script type="text/javascript" src="lepton.js"></script>
+		<script type="text/javascript">
+		
+			function init() {
+
+                var canvas = document.getElementById("leptonCanvas");
+                var ctx = canvas.getContext("2d");
+                
+				window.imageData.forEach(function(rowData, row) {
+					rowData.forEach(function(color, col) {
+                		ctx.fillStyle = '#' + color;
+                		ctx.fillRect(col * 4,row * 4, 4, 4);      
+					});
+				});
+				
+			}
+		</script>
+	</head>
+
+	<body onload="init();">
+	<canvas id="leptonCanvas" width="640" height="480" style="border:1px solid #999;">
+    </canvas>
+	</body>
+</html>
