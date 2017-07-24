@@ -5,6 +5,7 @@ This expands on the raspberrypi_capture example, writing the output to a javascr
 ### Todo: 
 1. skip writing to a file and stream from memory
 2. stream changes over websockets to give a more realtime update
+3. add a timer to delay reading from the SPI video stream. (select blocking delay isn't working on the pi).
 
 ### Defaults: 
 1. SPI channel 1 - update the "/dev/spidev0.1" value accordingly
