@@ -18,27 +18,31 @@
 					}
 				}
 
+				var range = Math.round(max - min);
 				//var range = Math.round((max - min) / 3);
-				//var div = Math.round(range / 256);
-				var range = Math.round(65535/ (max - min));
 				var div = Math.round(range / 256);
 				
 				var canvas = document.getElementById("leptonCanvas");
 				var ctx = canvas.getContext("2d");
-				
+
+				var canvas2 = document.getElementById("leptonCanvas2");
+				var ctx2 = canvas2.getContext("2d");
+							
 				window.imageData.forEach(function(rowData, row) {
 					rowData.forEach(function(value, col) {
 						value -= min;
-						var rgb = (Math.floor(Math.min(value, range) / div)).toString(16);
-						var r,g,b = 0;
-						b = (Math.floor(Math.min(value, range) / div)).toString(16);
-						value = Math.max(value - range, 0);
-						g = (Math.floor(Math.min(value, range) / div)).toString(16);
-						value = Math.max(value - range, 0);
-						r = (Math.floor(value, range / div)).toString(16);
+						var rgb = (Math.floor(value / div)).toString(16);
 						ctx.fillStyle = '#' + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb);
-						//ctx.fillStyle = '#' + ('00'.substr(r.length) + r) + ('00'.substr(g.length) + g) + ('00'.substr(b.length) + b);
 						ctx.fillRect(col * 4,row * 4, 4, 4);      
+
+						var r,g,b;
+						b = (Math.floor(Math.min(value, (range/3)) / div)).toString(16);
+						value = Math.max(value - (range/3), 0);
+						g = (Math.floor(Math.min(value, (range/3)) / div)).toString(16);
+						value = Math.max(value - (range/3), 0);
+						r = (Math.floor(value, (range/3) / div)).toString(16);
+						ctx2.fillStyle = '#' + ('00'.substr(r.length) + r) + ('00'.substr(g.length) + g) + ('00'.substr(b.length) + b);
+						ctx2.fillRect(col * 4,row * 4, 4, 4);      
 					});
 				});
 				
