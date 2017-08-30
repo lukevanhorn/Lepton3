@@ -9,21 +9,20 @@
 			var loading = false;
 		
 			function drawImage() {
-
-                var canvas = document.getElementById("leptonCanvas");
-                var ctx = canvas.getContext("2d");
-                
+				
+				var canvas = document.getElementById("leptonCanvas");
+				var ctx = canvas.getContext("2d");
+				
 				window.imageData.forEach(function(rowData, row) {
 					rowData.forEach(function(value, col) {
 						var r,g,b = 0;
-						b = Math.round(Math.min(value, 5461) / 21.33);
+						b = (Math.floor(Math.min(value, 5461) / 21.5)).toString(16);
 						value = Math.max(value - 5461, 0);
-						g = Math.round(Math.min(value, 5461) / 21.33);
+						g = (Math.floor(Math.min(value, 5461) / 21.5)).toString(16);
 						value = Math.max(value - 5461, 0);
-						r = Math.round(value, 5461 / 21.33);
-						var color = '#' + ('00'.substr(r.length) + r) + ('00'.substr(b.length) + b) + ('00'.substr(b.length) + b);
-                		ctx.fillStyle = '#' + color;
-                		ctx.fillRect(col * 4,row * 4, 4, 4);      
+						r = (Math.floor(value, 5461 / 21.5)).toString(16);
+						ctx.fillStyle = '#' + ('00'.substr(r.length) + r) + ('00'.substr(b.length) + b) + ('00'.substr(b.length) + b);
+						ctx.fillRect(col * 4,row * 4, 4, 4);      
 					});
 				});
 				
