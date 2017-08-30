@@ -24,9 +24,11 @@
 				
 				var canvas = document.getElementById("leptonCanvas");
 				var ctx = canvas.getContext("2d");
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 				var canvas2 = document.getElementById("leptonCanvas2");
 				var ctx2 = canvas2.getContext("2d");
+				ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
 							
 				window.imageData.forEach(function(rowData, row) {
 					rowData.forEach(function(value, col) {
