@@ -35,17 +35,17 @@
 					rowData.forEach(function(value, col) {
 						value = Math.min(value, 16383);						
 						value -= min;
-						var rgb = (Math.floor((value * div) / 256)).toString(16);
+						var rgb = (Math.floor((value * div) / 64)).toString(16);
 						ctx.fillStyle = '#' + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb);
 						ctx.fillRect(col * 4,row * 4, 4, 4);      
 
 
 						var r,g,b;
-						b = (Math.floor((value * div) / 256)).toString(16);
+						b = (Math.floor((value * div) / 64)).toString(16);
 						value = Math.max(value - (range/3), 0);
-						g = (Math.floor((value * div) / 256)).toString(16);
+						g = (Math.floor((value * div) / 64)).toString(16);
 						value = Math.max(value - (range/3), 0);
-						r = (Math.floor((value * div) / 256)).toString(16);
+						r = (Math.floor((value * div) / 64)).toString(16);
 						ctx2.fillStyle = '#' + ('00'.substr(r.length) + r) + ('00'.substr(g.length) + g) + ('00'.substr(b.length) + b);
 						ctx2.fillRect(col * 4,row * 4, 4, 4);      
 					});
