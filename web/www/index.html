@@ -39,13 +39,13 @@
 						ctx.fillStyle = '#' + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb);
 						ctx.fillRect(col * 4,row * 4, 4, 4);      
 
-
+						var range = range / 3;
 						var r,g,b;
-						b = (Math.floor((Math.min(value, 5461) / 5461) * 256)).toString(16);
-						value = Math.max(value - 5461, 0);
-						g = (Math.floor((Math.min(value, 5461) / 5461) * 256)).toString(16);
-						value = Math.max(value - 5461, 0);
-						r = (Math.floor((Math.min(value, 5461) / 5461) * 256)).toString(16);
+						b = (Math.floor((Math.min(value, range) / range) * 256)).toString(16);
+						value = Math.max(value - range, 0);
+						g = (Math.floor((Math.min(value, range) / range) * 256)).toString(16);
+						value = Math.max(value - range, 0);
+						r = (Math.floor((Math.min(value, range) / range) * 256)).toString(16);
 						ctx2.fillStyle = '#' + ('00'.substr(r.length) + r) + ('00'.substr(g.length) + g) + ('00'.substr(b.length) + b);
 						ctx2.fillRect(col * 4,row * 4, 4, 4);      
 					});
