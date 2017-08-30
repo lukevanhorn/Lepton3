@@ -9,12 +9,12 @@
 			var loading = false;
 		
 			function drawImage() {
-				var min, max = 0;
+				var min = 0, max = 0;
 
-				for(var row = 0; i < imageData.length; row++) {
+				for(var row = 0; row < imageData.length; row++) {
 					for(var col = 0; col < imageData[row].length; col++) {
-						min = Math.min(min, imageData[row[col]]);
-						max = Math.max(max, imageData[row[col]]);
+						min = Math.min(min, imageData[row][col]);
+						max = Math.max(max, imageData[row][col]);
 					}
 				}
 
