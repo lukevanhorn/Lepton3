@@ -577,12 +577,6 @@ int main (void)
     debug("bits per word: %d\n", bits);
 	debug("max speed: %d Hz (%d KHz)\n", speed, speed/1000);
     
-    //while(status_bits != 0x0f) { transfer(); }
-                
-    //status_bits = 0x0f;
-            
-    //save_json_file();
-    
 	/* Create the socket and set it up to accept connections. */
 	sock = make_socket (PORT);
 	if (listen (sock, 1) < 0) {

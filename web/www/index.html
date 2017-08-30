@@ -9,45 +9,43 @@
 			var loading = false;
 		
 			function drawImage() {
-				var min = 0, max = 0;
+				var min = 16383, max = 0;
 
 				for(var row = 0; row < imageData.length; row++) {
 					for(var col = 0; col < imageData[row].length; col++) {
+						if(imageData[row][col] > 16383) {
+							imageData[row][col] = 0;
+						} 
 						min = Math.min(min, imageData[row][col]);
 						max = Math.max(max, imageData[row][col]);
 					}
 				}
 
 				var range = max - min;
-				var div = Math.round(16383 / range);
-				//var range = Math.round((max - min) / 3);
-				//var div = Math.round(range / 256);
+				var range = Math.round(range / 3);
+				var div = range / 256;
 				
+				document.getElementById("imageValues").innerHTML = 'min: ' + min + ', max: ' + max + ', range: ' + range + ', div: ' + div;
+
 				var canvas = document.getElementById("leptonCanvas");
 				var ctx = canvas.getContext("2d");
 				ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-				var canvas2 = document.getElementById("leptonCanvas2");
-				var ctx2 = canvas2.getContext("2d");
-				ctx2.clearRect(0, 0, canvas2.width, canvas2.height);
-							
 				window.imageData.forEach(function(rowData, row) {
 					rowData.forEach(function(value, col) {
-						//value = Math.min(value, 16383);						
 						value -= min;
-						var rgb = (Math.floor((value / range) * 256)).toString(16);
+						var rgb = Math.floor(value * div).toString(16);
 						ctx.fillStyle = '#' + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb);
 						ctx.fillRect(col * 4,row * 4, 4, 4);      
-
-						var range = range / 3;
+				
 						var r,g,b;
-						b = (Math.floor((Math.min(value, range) / range) * 256)).toString(16);
+						b = (Math.floor((Math.min(value, range)) * div)).toString(16);
 						value = Math.max(value - range, 0);
-						g = (Math.floor((Math.min(value, range) / range) * 256)).toString(16);
+						g = (Math.floor((Math.min(value, range)) * div)).toString(16);
 						value = Math.max(value - range, 0);
-						r = (Math.floor((Math.min(value, range) / range) * 256)).toString(16);
-						ctx2.fillStyle = '#' + ('00'.substr(r.length) + r) + ('00'.substr(g.length) + g) + ('00'.substr(b.length) + b);
-						ctx2.fillRect(col * 4,row * 4, 4, 4);      
+						r = (Math.floor((Math.min(value, range)) * div)).toString(16);
+						ctx.fillStyle = '#' + ('00'.substr(r.length) + r) + ('00'.substr(g.length) + g) + ('00'.substr(b.length) + b);
+						ctx.fillRect(col * 4,row * 4, 4, 4);      
 					});
 				});
 				
@@ -90,7 +88,6 @@
 	<body onload="init();">
 	<canvas id="leptonCanvas" width="640" height="480" style="border:1px solid #999;">
 	</canvas>
-	<canvas id="leptonCanvas2" width="640" height="480" style="border:1px solid #999;">
-    </canvas>	
+	<div id="imageValues"></div>
 	</body>
 </html>
