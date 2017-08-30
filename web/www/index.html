@@ -33,7 +33,7 @@
 							
 				window.imageData.forEach(function(rowData, row) {
 					rowData.forEach(function(value, col) {
-						value = Math.min(value, 16383);						
+						//value = Math.min(value, 16383);						
 						value -= min;
 						var rgb = (Math.floor((value / range) * 256)).toString(16);
 						ctx.fillStyle = '#' + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb);
