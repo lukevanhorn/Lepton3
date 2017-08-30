@@ -9,18 +9,30 @@
 			var loading = false;
 		
 			function drawImage() {
+				var min, max = 0;
+
+				for(var row = 0; i < imageData.length; row++) {
+					for(var col = 0; col < imageData[row].length; col++) {
+						min = Math.min(min, imageData[row[col]]);
+						max = Math.max(max, imageData[row[col]]);
+					}
+				}
+
+				var range = Math.round((max - min) / 3);
+				var div = Math.round(range / 256);
 				
 				var canvas = document.getElementById("leptonCanvas");
 				var ctx = canvas.getContext("2d");
 				
 				window.imageData.forEach(function(rowData, row) {
 					rowData.forEach(function(value, col) {
+						value -= min;
 						var r,g,b = 0;
-						b = (Math.floor(Math.min(value, 5461) / 21.5)).toString(16);
-						value = Math.max(value - 5461, 0);
-						g = (Math.floor(Math.min(value, 5461) / 21.5)).toString(16);
-						value = Math.max(value - 5461, 0);
-						r = (Math.floor(value, 5461 / 21.5)).toString(16);
+						b = (Math.floor(Math.min(value, range) / div)).toString(16);
+						value = Math.max(value - range, 0);
+						g = (Math.floor(Math.min(value, range) / div)).toString(16);
+						value = Math.max(value - range, 0);
+						r = (Math.floor(value, range / div)).toString(16);
 						ctx.fillStyle = '#' + ('00'.substr(r.length) + r) + ('00'.substr(b.length) + b) + ('00'.substr(b.length) + b);
 						ctx.fillRect(col * 4,row * 4, 4, 4);      
 					});
