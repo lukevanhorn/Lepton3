@@ -3,21 +3,62 @@
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 		<title>Lepton Web UI</title>
-		<script type="text/javascript" src="lepton.js"></script>
 		<script type="text/javascript">
+
+			var imageData = [[]];
+			var loading = false;
 		
-			function init() {
+			function drawImage() {
 
                 var canvas = document.getElementById("leptonCanvas");
                 var ctx = canvas.getContext("2d");
                 
 				window.imageData.forEach(function(rowData, row) {
-					rowData.forEach(function(color, col) {
+					rowData.forEach(function(value, col) {
+						var r,g,b = 0;
+						b = Math.round(Math.min(value, 5461) / 21.33);
+						value = Math.max(value - 5461, 0);
+						g = Math.round(Math.min(value, 5461) / 21.33);
+						value = Math.max(value - 5461, 0);
+						r = Math.round(value, 5461 / 21.33);
+						var color = '#' + ('00'.substr(r.length) + r) + ('00'.substr(b.length) + b) + ('00'.substr(b.length) + b);
                 		ctx.fillStyle = '#' + color;
                 		ctx.fillRect(col * 4,row * 4, 4, 4);      
 					});
 				});
 				
+			}
+
+			function loadImage() {
+
+				if(loading) {
+					return;
+				}
+
+				loading = true;
+
+				var xhttp = new XMLHttpRequest();
+
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+						loading = false;
+
+						var result = JSON.parse(this.responseText);
+						if(!result.data) {
+							return;
+						}
+						window.imageData = result.data;	
+
+						drawImage();					
+					}
+				};				
+				xhttp.open("GET", "lepton.json", true);
+				xhttp.send();
+			}
+
+			function init() {
+				setInterval(loadImage, 5000);
+				loadImage();
 			}
 		</script>
 	</head>
