@@ -213,6 +213,8 @@ int make_socket (uint16_t port)
 
 int send_image_data(char *content_request, char *content_type, int sock) {
 
+	int i, j = 0;
+	char content_length[100];
 	char * pos; 
 	char imageBuffer[200000] = "\0";
 
@@ -243,7 +245,7 @@ int send_image_data(char *content_request, char *content_type, int sock) {
 
 
 	send(sock, http_header_ok, sizeof(http_header_ok), 0);	
-	sprintf(content_length, "Content-Length: %d\r\n", file_length);
+	sprintf(content_length, "Content-Length: %d\r\n", strlen(imageBuffer));
 	send(sock, http_header_content_json, strlen(http_header_content_json), 0);		
 
 	send(sock, imageBuffer, strlen(imageBuffer), 0);
@@ -411,7 +413,8 @@ int read_from_client (int filedes)
 
 			//image request
 			if(strncmp(request->content, "/lepton.json", strlen("/lepton.json")) == 0) {
-			    send_image_data();                
+				send_image_data(request->content, request->type, filedes); 
+				break;               
 			}
 			
 			get_content(request->content,request->type, filedes);
