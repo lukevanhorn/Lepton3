@@ -19,7 +19,7 @@
 				}
 
 				var range = max - min;
-				var div = Math.round(65535 / range);
+				var div = Math.round(16383 / range);
 				//var range = Math.round((max - min) / 3);
 				//var div = Math.round(range / 256);
 				
@@ -33,6 +33,7 @@
 							
 				window.imageData.forEach(function(rowData, row) {
 					rowData.forEach(function(value, col) {
+						value = Math.min(value, 16383);						
 						value -= min;
 						var rgb = (Math.floor((value * div) / 256)).toString(16);
 						ctx.fillStyle = '#' + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb);
