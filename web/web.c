@@ -27,7 +27,7 @@
 
 #define WWW_DIR "www"	
 
-#define PORT    8080
+#define PORT    80
 #define MAXMSG  5120
 
 #define BUFFER_SIZE 4096
