@@ -18,10 +18,10 @@
 					}
 				}
 
-				var range = Math.round((max - min) / 3);
-				var div = Math.round(range / 256);
-				//var range = Math.round(16384/ (max - min));
-				//var div = Math.round(range / 64);
+				//var range = Math.round((max - min) / 3);
+				//var div = Math.round(range / 256);
+				var range = Math.round(16384/ (max - min));
+				var div = Math.round(range / 64);
 				
 				var canvas = document.getElementById("leptonCanvas");
 				var ctx = canvas.getContext("2d");
@@ -36,7 +36,8 @@
 						g = (Math.floor(Math.min(value, range) / div)).toString(16);
 						value = Math.max(value - range, 0);
 						r = (Math.floor(value, range / div)).toString(16);
-						ctx.fillStyle = '#' + ('00'.substr(r.length) + r) + ('00'.substr(g.length) + g) + ('00'.substr(b.length) + b);
+						ctx.fillStyle = '#' + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb);
+						//ctx.fillStyle = '#' + ('00'.substr(r.length) + r) + ('00'.substr(g.length) + g) + ('00'.substr(b.length) + b);
 						ctx.fillRect(col * 4,row * 4, 4, 4);      
 					});
 				});
