@@ -38,6 +38,7 @@ char http_header_content_html[] = "Content-Type: text/html\r\n\r\n";
 char http_header_content_css[] = "Content-Type: text/css\r\n\r\n";
 char http_header_content_txt[] = "Content-Type: text/plain\r\n\r\n";
 char http_header_content_js[] = "Content-Type: application/javascript\r\n\r\n";
+char http_header_content_json[] = "Content-Type: application/json\r\n\r\n";
 char http_header_content_ico[] = "Content-Type: image/vnd.microsoft.icon\r\n\r\n";
 char http_header_content_png[] = "Content-Type: image/png\r\n\r\n";
 char http_header_content_plain[] = "Content-Type: text/plain\r\n\r\n";
@@ -97,7 +98,7 @@ static void save_json_file(void)
     int rgb_conv = 64;
     int rgb_val = 0;
     
-    sprintf(image_name, "www/lepton.js");
+    sprintf(image_name, "www/lepton.json");
 
     FILE *f = fopen(image_name, "w+");
     if (f == NULL)
@@ -123,7 +124,7 @@ static void save_json_file(void)
     
     rgb_conv = 16383 / (maxval - minval);
     
-    fprintf(f,"(function() { window.imageData = [");
+    fprintf(f,"{ \"data\": [");
     for(i=0; i < 240; i += 2)
     {
         fprintf(f, "\n%s[",  i > 0 ? "," : "");  //start of row
@@ -145,7 +146,7 @@ static void save_json_file(void)
         
         fprintf(f, "]");  //end of row
     }
-    fprintf(f,"]; })()");
+    fprintf(f,"]}");
 
     fclose(f);
 }
@@ -189,6 +190,11 @@ int make_socket (uint16_t port)
 		exit (EXIT_FAILURE);
 	}
 
+	int enable = 1;
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
+		perror("setsockopt(SO_REUSEADDR) failed");
+	}
+
 	memset(&name, '0', sizeof(name));
 
 	name.sin_family = AF_INET;
@@ -203,6 +209,50 @@ int make_socket (uint16_t port)
 	debug("bound to socket\n");
      
 	return sock;
+}
+
+int send_image_data(char *content_request, char *content_type, int sock) {
+
+	int i, j = 0;
+	char content_length[100];
+	char * pos; 
+	char imageBuffer[200000] = "\0";
+
+	pos = &imageBuffer[0];
+
+	pos += sprintf(pos,"{\"data\":[");
+
+    for(i=0; i < 240; i += 2)
+    {
+		pos += sprintf(pos, "%s[%d",  (i > 0 ? "," : ""), lepton_image[i][0]);  //start of row
+	
+        /* first 80 pixels in row */
+        for(j = 1; j < 80; j++)
+        {
+			pos += sprintf(pos, ",%d", lepton_image[i][j]);
+        }
+
+        /* second 80 pixels in row */
+        for(j = 0; j < 80; j++)
+        {
+			pos += sprintf(pos, ",%d", lepton_image[i+1][j]);
+        }   
+        
+        pos += sprintf(pos, "]");  //end of row
+    }
+	
+	pos += sprintf(pos,"]}");
+
+
+	send(sock, http_header_ok, sizeof(http_header_ok), 0);	
+	sprintf(content_length, "Content-Length: %d\r\n", strlen(imageBuffer));
+	send(sock, http_header_content_json, strlen(http_header_content_json), 0);		
+
+	send(sock, imageBuffer, strlen(imageBuffer), 0);
+
+	debug("sent image data: %d bytes\r\n", strlen(imageBuffer));
+
+	return 1;
 }
 
 int get_content(char *content_request, char *content_type, int sock)
@@ -226,23 +276,7 @@ int get_content(char *content_request, char *content_type, int sock)
 	sprintf(filename, "%s%s", WWW_DIR, content_request);
 	debug("open: %s\n", filename);
 	pFile = fopen (filename, "r");
-	
-	/*
-	if (strstr(content_request, ".png") > 0 || strstr(content_request, ".ico") > 0) {
-		pFile = fopen (filename, "rb");
-	} else {
-		pFile = fopen (filename, "r");
-	}
-	*/
-	/*
-	if(strncmp(content_type, "image/png", 9) == 0 || strncmp(content_type, "image/vnd.microsoft.icon", 23) == 0) {
-		printf("open binary");
-		fflush(stdout);
-		pFile = fopen (filename, "rb");
-	} else {
-		pFile = fopen (filename, "r");
-	}
-	*/
+
 	if (pFile == NULL) {
 		//send 404 not found
 		perror("404 Not Found");
@@ -291,7 +325,7 @@ int get_content(char *content_request, char *content_type, int sock)
 
 	free(buffer);
 	
-	debug("sent file: %s\r\n",filename);
+	debug("sent file: %s %d %d\r\n",filename, file_length, bytes_read);
 
 	return 1;
 }
@@ -378,14 +412,14 @@ int read_from_client (int filedes)
 			}
 
 			//image request
-			if(strncmp(request->content, "/lepton.js", strlen("/lepton.js")) == 0) {
-			                    
-                save_json_file();
+			if(strncmp(request->content, "/lepton.json", strlen("/lepton.json")) == 0) {
+				send_image_data(request->content, request->type, filedes); 
+				break;               
 			}
 			
 			get_content(request->content,request->type, filedes);
 
-			break;;
+			break;
 		}
 		
 	}
@@ -541,13 +575,7 @@ int main (void)
 
     debug("spi mode: %d\n", mode);
     debug("bits per word: %d\n", bits);
-    debug("max speed: %d Hz (%d KHz)\n", speed, speed/1000);
-    
-    while(status_bits != 0x0f) { transfer(); }
-                
-    status_bits = 0x0f;
-            
-    save_json_file();
+	debug("max speed: %d Hz (%d KHz)\n", speed, speed/1000);
     
 	/* Create the socket and set it up to accept connections. */
 	sock = make_socket (PORT);
@@ -604,6 +632,7 @@ int main (void)
 					if (read_from_client (i) < 0)
 					{
 						close (i);
+						FD_CLR (i, &active_fd_set);close (i);
 						FD_CLR (i, &active_fd_set);
 					}
 				}

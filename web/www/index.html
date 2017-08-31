@@ -3,27 +3,91 @@
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 		<title>Lepton Web UI</title>
-		<script type="text/javascript" src="lepton.js"></script>
 		<script type="text/javascript">
-		
-			function init() {
 
-                var canvas = document.getElementById("leptonCanvas");
-                var ctx = canvas.getContext("2d");
-                
+			var imageData = [[]];
+			var loading = false;
+		
+			function drawImage() {
+				var min = 16383, max = 0;
+
+				for(var row = 0; row < imageData.length; row++) {
+					for(var col = 0; col < imageData[row].length; col++) {
+						if(imageData[row][col] > 16383) {
+							imageData[row][col] = 0;
+						} 
+						min = Math.min(min, imageData[row][col]);
+						max = Math.max(max, imageData[row][col]);
+					}
+				}
+
+				var range = max - min;
+				var range = Math.round(range / 3);
+				var div = range / 256;
+				
+				document.getElementById("imageValues").innerHTML = 'min: ' + min + ', max: ' + max + ', range: ' + range + ', div: ' + div;
+
+				var canvas = document.getElementById("leptonCanvas");
+				var ctx = canvas.getContext("2d");
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+
 				window.imageData.forEach(function(rowData, row) {
-					rowData.forEach(function(color, col) {
-                		ctx.fillStyle = '#' + color;
-                		ctx.fillRect(col * 4,row * 4, 4, 4);      
+					rowData.forEach(function(value, col) {
+						value -= min;
+						var rgb = Math.floor(value * div).toString(16);
+						ctx.fillStyle = '#' + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb);
+						ctx.fillRect(col * 4,row * 4, 4, 4);      
+				
+						var r,g,b;
+						b = (Math.floor((Math.min(value, range)) * div)).toString(16);
+						value = Math.max(value - range, 0);
+						g = (Math.floor((Math.min(value, range)) * div)).toString(16);
+						value = Math.max(value - range, 0);
+						r = (Math.floor((Math.min(value, range)) * div)).toString(16);
+						ctx.fillStyle = '#' + ('00'.substr(r.length) + r) + ('00'.substr(g.length) + g) + ('00'.substr(b.length) + b);
+						ctx.fillRect(col * 4,row * 4, 4, 4);      
 					});
 				});
 				
+			}
+
+			function loadImage() {
+
+				if(loading) {
+					return;
+				}
+
+				loading = true;
+
+				var xhttp = new XMLHttpRequest();
+
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+						loading = false;
+
+						var result = JSON.parse(this.responseText);
+						if(!result.data) {
+							return;
+						}
+						window.imageData = result.data;	
+
+						drawImage();					
+					}
+				};				
+				xhttp.open("GET", "lepton.json", true);
+				xhttp.send();
+			}
+
+			function init() {
+				setInterval(loadImage, 5000);
+				loadImage();
 			}
 		</script>
 	</head>
 
 	<body onload="init();">
 	<canvas id="leptonCanvas" width="640" height="480" style="border:1px solid #999;">
-    </canvas>
+	</canvas>
+	<div id="imageValues"></div>
 	</body>
 </html>
