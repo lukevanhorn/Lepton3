@@ -580,7 +580,7 @@ static void getLastImageIndex(void) {
 
 	} while (access(image_name, F_OK) == 0);
 
-	return null;
+	return;
 }
 
 int main (void)
