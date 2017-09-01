@@ -96,7 +96,7 @@ static void save_image_data(void)
     int j;
     char image_name[32];
 	
-	sprintf(image_name, "www/data/IMG_%.4d.json", image_index);
+	sprintf(image_name, "www/data/img_%.4d.json", image_index);
 
     FILE *f = fopen(image_name, "w+");
     if (f == NULL)
@@ -567,9 +567,9 @@ int getLastImageIndex(void) {
 	char image_name[32];
 	
 	do {
-        sprintf(image_name, "www/data/%.6d.json", image_index);
+        sprintf(image_name, "www/data/img_%.4d.json", image_index);
         image_index += 1;
-        if (image_index > 999999) 
+        if (image_index > 9999) 
         {
             image_index = 0;
             break;
