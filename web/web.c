@@ -96,7 +96,7 @@ static void save_sample(void)
     int j;
 	char image_name[32];
 	
-	sprintf(image_name, "www/data/img_%.4d.json", image_index)++;	
+	sprintf(image_name, "www/data/img_%.4d.json", image_index++);	
 
     FILE *f = fopen(image_name, "w+");
     if (f == NULL)
