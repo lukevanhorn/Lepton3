@@ -65,6 +65,8 @@ static uint32_t speed = 16000000;
 static uint16_t delay = 65535;
 static uint8_t status_bits = 0;
 
+int image_index = 0;
+
 int8_t last_packet = -1;
 
 #define VOSPI_FRAME_SIZE (164)
@@ -86,6 +88,48 @@ void debug(const char *fmt, ...)
 
 	va_end(ap);
 #endif
+}
+
+static void save_image_data(void)
+{
+    int i;
+    int j;
+    char image_name[32];
+	
+	sprintf(image_name, "www/data/IMG_%.4d.json", image_index);
+
+    FILE *f = fopen(image_name, "w+");
+    if (f == NULL)
+    {
+        debug("Error opening file!\n");
+        exit(1);
+    }
+
+    fprintf(f,"{ \"data\": [");
+    for(i=0; i < 240; i += 2)
+    {
+		fprintf(f, "%s[%d",  (i > 0 ? "," : ""), lepton_image[i][0]);  //start of row
+	
+        /* first 80 pixels in row */
+        for(j = 1; j < 80; j++)
+        {
+			fprintf(f, ",%d", lepton_image[i][j]);
+        }
+
+        /* second 80 pixels in row */
+        for(j = 0; j < 80; j++)
+        {
+			fprintf(f, ",%d", lepton_image[i+1][j]);
+        }   
+        
+        fprintf(f, "]");  //end of row
+    }
+	
+	fprintf(f,"]}");
+
+	fclose(f);
+	
+	return;
 }
 
 static void save_json_file(void)
@@ -150,7 +194,6 @@ static void save_json_file(void)
 
     fclose(f);
 }
-
 
 void http_request_init(struct http_request *request) 
 {
@@ -414,6 +457,7 @@ int read_from_client (int filedes)
 			//image request
 			if(strncmp(request->content, "/lepton.json", strlen("/lepton.json")) == 0) {
 				send_image_data(request->content, request->type, filedes); 
+				save_image_data();
 				break;               
 			}
 			
@@ -519,6 +563,22 @@ int transfer()
     return status_bits;
 }
 
+int getLastImageIndex(void) {
+	char image_name[32];
+	
+	do {
+        sprintf(image_name, "www/data/%.6d.json", image_index);
+        image_index += 1;
+        if (image_index > 999999) 
+        {
+            image_index = 0;
+            break;
+        }
+
+	} while (access(image_name, F_OK) == 0);
+	
+	return 1;
+}
 
 int main (void)
 {
@@ -527,9 +587,11 @@ int main (void)
 	int i;
 	struct sockaddr_in clientname;
 	size_t size;
-   struct timeval tv;
+    struct timeval tv;
 	
-    int ret = 0;
+	int ret = 0;
+	
+	getLastImageIndex();
 
     spi_fd = open(device, O_RDWR);
     if (spi_fd < 0)
