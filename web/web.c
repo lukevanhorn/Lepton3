@@ -65,7 +65,7 @@ static uint32_t speed = 16000000;
 static uint16_t delay = 65535;
 static uint8_t status_bits = 0;
 
-int image_index = 0;
+static int image_index = 0;
 
 int8_t last_packet = -1;
 
@@ -592,6 +592,8 @@ int main (void)
 	int ret = 0;
 	
 	getLastImageIndex();
+
+	debug("image index set to %d", image_index);
 
     spi_fd = open(device, O_RDWR);
     if (spi_fd < 0)
