@@ -96,7 +96,7 @@ static void save_sample(void)
     int j;
 	char image_name[32];
 	
-	sprintf(image_name, "www/data/img_%.4d.json", image_index);
+	sprintf(image_name, "www/data/img_%.4d.json", image_index)++;	
 
     FILE *f = fopen(image_name, "w+");
     if (f == NULL)
@@ -596,7 +596,7 @@ int main (void)
 	
 	getLastImageIndex();
 
-	debug("image index set to %d", image_index);		
+	debug("image index set to %d\n", image_index);		
 
     spi_fd = open(device, O_RDWR);
     if (spi_fd < 0)
