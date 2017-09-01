@@ -90,11 +90,11 @@ void debug(const char *fmt, ...)
 #endif
 }
 
-static void save_image_data(void)
+static void save_sample(void)
 {
     int i;
     int j;
-    char image_name[32];
+	char image_name[32];
 	
 	sprintf(image_name, "www/data/img_%.4d.json", image_index);
 
@@ -457,7 +457,7 @@ int read_from_client (int filedes)
 			//image request
 			if(strncmp(request->content, "/lepton.json", strlen("/lepton.json")) == 0) {
 				send_image_data(request->content, request->type, filedes); 
-				save_image_data();
+				save_sample();
 				break;               
 			}
 			
@@ -563,9 +563,12 @@ int transfer()
     return status_bits;
 }
 
-int getLastImageIndex(void) {
+static void getLastImageIndex(void) {
+
 	char image_name[32];
-	
+
+	image_index = 0;
+
 	do {
         sprintf(image_name, "www/data/img_%.4d.json", image_index);
         image_index += 1;
@@ -576,8 +579,8 @@ int getLastImageIndex(void) {
         }
 
 	} while (access(image_name, F_OK) == 0);
-	
-	return 1;
+
+	return null;
 }
 
 int main (void)
@@ -593,7 +596,7 @@ int main (void)
 	
 	getLastImageIndex();
 
-	debug("image index set to %d", image_index);
+	debug("image index set to %d", image_index);		
 
     spi_fd = open(device, O_RDWR);
     if (spi_fd < 0)
