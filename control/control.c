@@ -282,7 +282,7 @@ int main(int argc, char *argv[])
     printf("successfully opened port %d\n", result);
     
     if(readData(LEP_MOD_AGC, 0x00, 2) > 0) {
-        printf("AGC enabled: %d\n", enumRE(rx_data));
+        printf("AGC enabled: %d\n", enumRE((int)rx_data));
     }
     
     tx_data[0] = enumRE(1);
@@ -291,11 +291,11 @@ int main(int argc, char *argv[])
     printf("Set AGC Enable: %d\n", status_code);
 
     if(readData(LEP_MOD_AGC, 0x00, 2) > 0) {
-        printf("AGC enabled: %d\n", enumRE(rx_data));
+        printf("AGC enabled: %d\n", enumRE((int)rx_data));
     }
     
     if(readData(LEP_MOD_AGC, 0x08, 4) > 0) {
-        printf("AGC ROI: startcol: %d startrow: %d endcol: %d endrow: %d\n", regRE(rx_data), regRE(rx_data[1]), regRE(rx_data[2]), regRE(rx_data[3]));
+        printf("AGC ROI: startcol: %d startrow: %d endcol: %d endrow: %d\n", regRE((uint16_t)rx_data[0]), regRE((uint16_t)rx_data[1]), regRE((uint16_t)rx_data[2]), regRE((uint16_t)rx_data[3]));
     }
     
     if(readData(LEP_MOD_AGC, 0x0C, 4) > 0) {
@@ -303,12 +303,12 @@ int main(int argc, char *argv[])
     }
     
     if(readData(LEP_MOD_AGC, 0x24, 1) > 0) {
-        printf("AGC DAMPENING: %d\n", regRE(rx_data));
+        printf("AGC DAMPENING: %d\n", regRE((uint16_t)rx_data[0]));
     }
     
     /* shutter position */
     if(readData(LEP_MOD_SYS, 0x38, 2) > 0) {
-        printf("Shutter position: %d\n", enumRE(rx_data));
+        printf("Shutter position: %d\n", enumRE((int)rx_data[0]));
     }
     
     
