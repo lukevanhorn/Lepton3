@@ -127,7 +127,7 @@ int waitForReady(int tries) {
 */
 int readData(uint8_t mod, uint8_t com, uint16_t length) {
 
-    int count = 0;
+    int count = 0, i = 0;
     struct write_register tx;    
     uint8_t command[4] = { 0x00, 0x00, 0x00, 0x00 };
 
@@ -185,8 +185,11 @@ int readData(uint8_t mod, uint8_t com, uint16_t length) {
    	if(count < 0) {
    	    printf("Error reading from data register \n");
    	    abort();   	    
-   	}
-   	
+    }
+     
+    while((i * 2) < count) {
+        printf("0x%04x", rx_data[i++]);  
+    }
    	//todo: check crc
    	
    	return count;
@@ -291,7 +294,7 @@ int main(int argc, char *argv[])
     printf("Set AGC Enable: %d\n", status_code);
 
     if(readData(LEP_MOD_AGC, 0x00, 2) > 0) {
-        printf("AGC enabled: %d\n", enumRE((int)rx_data));
+        printf("AGC enabled: %d\n", enumRE((int)rx_data[0]));
     }
     
     if(readData(LEP_MOD_AGC, 0x08, 4) > 0) {
