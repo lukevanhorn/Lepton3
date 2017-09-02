@@ -139,6 +139,7 @@ int readData(uint8_t mod, uint8_t com, uint16_t length) {
     tx.address = regRE(6);
     tx.data = regRE(length);
     write(device, &tx, sizeof(tx));     
+    printf("readbuf: 0x%04x %d\n", tx, sizeof(tx));  
 
     /* set the oem bit if necessary */
     if(mod == LEP_MOD_OEM || mod == LEP_MOD_RAD) {
