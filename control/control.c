@@ -138,7 +138,7 @@ int readData(uint8_t mod, uint8_t com, uint16_t length) {
     
     tx.address = regRE(6);
     tx.data = regRE(length);
-    write(device, &tx, sizeof(write_register));     
+    write(device, &tx, sizeof(tx));     
 
     /* set the oem bit if necessary */
     if(mod == LEP_MOD_OEM || mod == LEP_MOD_RAD) {
@@ -147,7 +147,7 @@ int readData(uint8_t mod, uint8_t com, uint16_t length) {
     
     tx.address = regRE(4);
     tx.data = ((0x00FF & mod) << 8) + com;
-    write(device, &tx, sizeof(write_register));   
+    write(device, &tx, sizeof(tx));   
 
     /* set the data length register (big endian) */
     //command[1] = 0x06; /* data length register */
@@ -218,12 +218,12 @@ int writeData(uint8_t mod, uint8_t com, uint16_t * data, uint16_t length) {
         tx.address = regRE(8 + (i *2));
         tx.data = data[i++];
 
-        write(device, &tx, sizeof(write_register));         
+        write(device, &tx, sizeof(tx));         
     } 
 
     tx.address = regRE(6);
     tx.data = regRE(length);
-    write(device, &tx, sizeof(write_register));     
+    write(device, &tx, sizeof(tx));     
 
     /* set the oem bit if necessary */
     if(mod == LEP_MOD_OEM || mod == LEP_MOD_RAD) {
@@ -232,7 +232,7 @@ int writeData(uint8_t mod, uint8_t com, uint16_t * data, uint16_t length) {
     
     tx.address = regRE(4);
     tx.data = ((0x00FF & mod) << 8) + com + 0x01;
-    write(device, &tx, sizeof(write_register));     
+    write(device, &tx, sizeof(tx));     
 
     //command[1] = 0x08;
     //memcpy(&command[2], data, (length * 2));
