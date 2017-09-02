@@ -151,9 +151,10 @@ int readData(uint8_t mod, uint8_t com, uint16_t length) {
     write(device, &tx, sizeof(tx));   
 
     /* set the data length register (big endian) */
-    //command[1] = 0x06; /* data length register */
-    //command[2] = (uint8_t)(length & 0x00FF);
-    //command[3] = (uint8_t)((length & 0xFF00) >> 8);
+    command[1] = 0x06; /* data length register */
+    command[2] = (uint8_t)(length & 0x00FF);
+    command[3] = (uint8_t)((length & 0xFF00) >> 8);
+    printf("readbuf: 0x%08x %d\n", command, sizeof(command));  
     //write(device, command, 4);    
     
     /* set module id, command id, and command type */
