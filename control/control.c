@@ -299,7 +299,7 @@ int main(int argc, char *argv[])
     }
     
     if(readData(LEP_MOD_AGC, 0x0C, 4) > 0) {
-        printf("AGC HIST: min: %d max: %d mean: %d num: %d\n", regRE(rx_data), regRE(rx_data[1]), regRE(rx_data[2]), regRE(rx_data[3]));
+        printf("AGC HIST: min: %d max: %d mean: %d num: %d\n", regRE((uint16_t)rx_data[0]), regRE((uint16_t)rx_data[1]), regRE((uint16_t)rx_data[2]), regRE((uint16_t)rx_data[3]));
     }
     
     if(readData(LEP_MOD_AGC, 0x24, 1) > 0) {
