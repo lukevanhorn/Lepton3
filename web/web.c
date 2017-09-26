@@ -811,10 +811,11 @@ int main(int argc, char *argv[])
     
 	while (1)
     {
-        //transfer();
+        transfer();
 		
 		//work-in-progress: wait until we should call transfer by calculating
 		//time between segments ~925000 nano seconds.  Currently not working well. 
+		/*
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp);
         if((tp.tv_nsec - start_time) > 900000) {
             transfer();
@@ -822,7 +823,8 @@ int main(int argc, char *argv[])
             avg_sample_time = ((avg_sample_time + (tp.tv_nsec - start_time)) / 2);
 			start_time = tp.tv_nsec;
         }        
-
+		*/
+		
 		/* look for input on one or more active sockets. */
 		read_fd_set = active_fd_set;
 		if (select (FD_SETSIZE, &read_fd_set, NULL, NULL, &tv) < 0)
