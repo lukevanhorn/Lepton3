@@ -22,8 +22,12 @@
 				}
 
 				var range = max - min;
-				var range = Math.round(range / 3);
-				var div = range / 256;
+				var seg = Math.round(range / 3);
+				var blue = min + seg;
+				var green = blue + seg;
+				var red = green + seg;
+				var div = 256 / range;
+				//var div = 256 / Math.round(range / 3);
 				
 				document.getElementById("imageValues").innerHTML = 'min: ' + min + ', max: ' + max + ', range: ' + range + ', div: ' + div;
 
@@ -34,18 +38,26 @@
 				window.imageData.forEach(function(rowData, row) {
 					rowData.forEach(function(value, col) {
 						value -= min;
-						var rgb = Math.floor(value * div).toString(16);
+						var rgb = Math.floor(value * (256/ (max - min))).toString(16);
 						ctx.fillStyle = '#' + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb) + ('00'.substr(rgb.length) + rgb);
 						ctx.fillRect(col * 4,row * 4, 4, 4);      
-				
-						var r,g,b;
-						b = (Math.floor((Math.min(value, range)) * div)).toString(16);
-						value = Math.max(value - range, 0);
-						g = (Math.floor((Math.min(value, range)) * div)).toString(16);
-						value = Math.max(value - range, 0);
-						r = (Math.floor((Math.min(value, range)) * div)).toString(16);
+				        /*
+				        var rgb = Math.floor(value * div);
+						//var r,g,b;
+						var b = ((value < blue) ?  128 + rgb : 128).toString(16); 
+						var g = ((value > blue && value < green) ?  128 + rgb : 128).toString(16); 
+						var r = ((value > green) ?  128 + rgb : 128).toString(16); 	
+						
+						//b = (Math.floor(rgb + (Math.min(value, range)) * div)).toString(16);
+						//value = Math.max(value - range, 0);
+						//g = (Math.floor(rgb +(Math.min(value, range)) * div)).toString(16);
+						//value = Math.max(value - range, 0);
+						//r = (Math.floor(rgb +(Math.min(value, range)) * div)).toString(16);
+						
 						ctx.fillStyle = '#' + ('00'.substr(r.length) + r) + ('00'.substr(g.length) + g) + ('00'.substr(b.length) + b);
-						ctx.fillRect(col * 4,row * 4, 4, 4);      
+						ctx.fillRect(col * 4,row * 4, 4, 4);
+						*/
+						
 					});
 				});
 				
@@ -78,8 +90,36 @@
 				xhttp.send();
 			}
 
+			function disableFFC(elem) {
+				elem.setAttribute('disabled', 'disabled');				
+
+				var xhttp = new XMLHttpRequest();
+
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+						elem.removeAttribute('disabled');	
+					}
+				};				
+				xhttp.open("GET", "ffc=off", true);
+				xhttp.send();
+			}
+
+			function runFFC(elem) {
+				elem.setAttribute('disabled', 'disabled');
+
+				var xhttp = new XMLHttpRequest();
+
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+						elem.removeAttribute('disabled');	
+					}
+				};				
+				xhttp.open("GET", "ffc=off", true);
+				xhttp.send();
+			}
+
 			function init() {
-				setInterval(loadImage, 5000);
+				setInterval(loadImage, 1000);
 				loadImage();
 			}
 		</script>
@@ -89,5 +129,8 @@
 	<canvas id="leptonCanvas" width="640" height="480" style="border:1px solid #999;">
 	</canvas>
 	<div id="imageValues"></div>
+	<button onclick="disableFFC(this);">Disable Auto FFC</button>
+	<button onclick="runFFC(this);">Run FFC</button>	
 	</body>
 </html>
+
