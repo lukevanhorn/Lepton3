@@ -19,11 +19,16 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/types.h>
+#include <linux/i2c-dev.h>
 #include <linux/spi/spidev.h>
 #include <limits.h>
 #include <sys/time.h>
+#include <time.h>
 
 #define _DEBUG 1
+
+#define LEP_I2C_DEVICE_ADDRESS 0x2A
+#define I2C_PORT "/dev/i2c-1"
 
 #define WWW_DIR "www"	
 
@@ -61,9 +66,15 @@ static void pabort(const char *s)
 static const char *device = "/dev/spidev0.1";
 static uint8_t mode = SPI_CPOL | SPI_CPHA;
 static uint8_t bits = 8;
-static uint32_t speed = 16000000;
-static uint16_t delay = 65535;
+static uint32_t speed = 20000000;
+static uint16_t delay = 0;
 static uint8_t status_bits = 0;
+
+static int image_index = 0;
+static int twi_device;
+
+static int save_data = 0;
+static char save_path[100] = "./www/data/";
 
 int8_t last_packet = -1;
 
@@ -86,6 +97,131 @@ void debug(const char *fmt, ...)
 
 	va_end(ap);
 #endif
+}
+
+int waitReady(void) {
+    
+    uint8_t status[2] = {0};
+    int status_code = 0;
+	uint8_t booted, boot_mode, busy;
+	booted = 0;
+	busy = 1;
+		
+	while(!booted || busy) {
+		if(write(twi_device, (uint8_t []){0x00, 0x02}, 2) < 0) {
+			printf("Error writing to i2c device\n");
+			abort();
+		}
+
+		if(read(twi_device, status, 2) < 0) {
+			printf("Error reading from status register \n");
+			abort();   	    
+		}
+		
+		status_code = (int)status[0];    
+		booted = ((status[1] & 0x04) >> 2);
+		boot_mode = ((status[1] & 0x02) >> 1);
+		busy = (status[1] & 0x01);
+	}
+    //printf("status code: %d booted: %d boot mode: %d busy: %d %d\n", (int)status[0], ((status[1] & 0x04) >> 2), ((status[1] & 0x02) >> 1), (status[1] & 0x01),  (booted & !busy));
+    
+    return status_code;
+}
+
+void initTWI(void) {
+    
+    twi_device = open(I2C_PORT, O_RDWR);
+
+    if(twi_device < 0) {
+        printf("Error Opening Device %d\n", device);
+        abort();
+    } 
+    
+    if(ioctl(twi_device, I2C_SLAVE, LEP_I2C_DEVICE_ADDRESS) < 0) {
+        printf("Error Connecting to Device %d\n", device);
+        abort();
+    }
+    
+    return;
+}
+
+static void disableFFC(void) {
+
+	initTWI();
+
+	//set the first two data registers to zero (32 bit enum for enable/disable)
+    waitReady();
+    write(twi_device, (uint8_t []){0x00, 0x08, 0x00, 0x00, 0x00, 0x00}, 6);
+	
+	//set the data length to 2 words
+    waitReady();
+    write(twi_device, (uint8_t []){0x00, 0x06, 0x00, 0x02}, 4);
+
+	//set the command register (0x0004) to update FFC settings (module sys 0x0200 + command 0x3C + set 0x1)
+    waitReady();
+    write(twi_device, (uint8_t []){0x00, 0x04, 0x02, 0x3D}, 4);
+    
+	waitReady();
+
+	close(twi_device);
+	
+	return;
+}
+
+static void doFFC(void) {
+
+	initTWI();
+
+	//set the command register (0x0004) to run FFC calibration (module sys 0x0200 + command 0x40 + run 0x2)
+    waitReady();
+    write(twi_device, (uint8_t []){0x00, 0x04, 0x02, 0x42}, 4);
+    
+	waitReady();
+	close(twi_device);
+
+	return;
+}
+
+static void save_sample(void)
+{
+    int i;
+    int j;
+	char image_name[32];
+	
+	sprintf(image_name, "%simg_%.4d.json", save_path, image_index++);	
+
+    FILE *f = fopen(image_name, "w+");
+    if (f == NULL)
+    {
+        debug("Error opening file!\n");
+        exit(1);
+    }
+
+    fprintf(f,"{ \"data\": [");
+    for(i=0; i < 240; i += 2)
+    {
+		fprintf(f, "%s[%d",  (i > 0 ? "," : ""), lepton_image[i][0]);  //start of row
+	
+        /* first 80 pixels in row */
+        for(j = 1; j < 80; j++)
+        {
+			fprintf(f, ",%d", lepton_image[i][j]);
+        }
+
+        /* second 80 pixels in row */
+        for(j = 0; j < 80; j++)
+        {
+			fprintf(f, ",%d", lepton_image[i+1][j]);
+        }   
+        
+        fprintf(f, "]");  //end of row
+    }
+	
+	fprintf(f,"]}");
+
+	fclose(f);
+	
+	return;
 }
 
 static void save_json_file(void)
@@ -150,7 +286,6 @@ static void save_json_file(void)
 
     fclose(f);
 }
-
 
 void http_request_init(struct http_request *request) 
 {
@@ -250,7 +385,7 @@ int send_image_data(char *content_request, char *content_type, int sock) {
 
 	send(sock, imageBuffer, strlen(imageBuffer), 0);
 
-	debug("sent image data: %d bytes\r\n", strlen(imageBuffer));
+	//debug("sent image data: %d bytes\r\n", strlen(imageBuffer));
 
 	return 1;
 }
@@ -325,7 +460,7 @@ int get_content(char *content_request, char *content_type, int sock)
 
 	free(buffer);
 	
-	debug("sent file: %s %d %d\r\n",filename, file_length, bytes_read);
+	//debug("sent file: %s %d %d\r\n",filename, file_length, bytes_read);
 
 	return 1;
 }
@@ -347,7 +482,7 @@ int parse_request_uri(struct http_request *request)
 	strncpy(request->content, request->pos, len);
 	request->pos += len;
 	
-	debug("content: %s\n", request->content);
+	//debug("content: %s\n", request->content);
 
 	return 0;
 }
@@ -369,7 +504,7 @@ int parse_request_type(struct http_request *request)
 	strncpy(request->type, request->pos, len);
 	request->pos += len;
 	
-	debug("type: %s\n", request->type);
+	//debug("type: %s\n", request->type);
 
 	return 0;
 }
@@ -396,7 +531,7 @@ int read_from_client (int filedes)
 		} else {
 			//parse packet
 
-			debug("Server request: `%s'\n\n", request->buffer);
+			//debug("Server request: `%s'\n\n", request->buffer);
 
 			if (parse_request_uri(request) < 0) {
 				break;	
@@ -414,6 +549,25 @@ int read_from_client (int filedes)
 			//image request
 			if(strncmp(request->content, "/lepton.json", strlen("/lepton.json")) == 0) {
 				send_image_data(request->content, request->type, filedes); 
+				if(save_data) {
+					save_sample();
+				}
+				break;               
+			}
+
+			//FFC disable
+			if(strncmp(request->content, "/ffc=off", strlen("/ffc=off")) == 0) {
+				disableFFC();
+				send(filedes, http_header_ok, sizeof(http_header_ok), 0);	
+				send(filedes, "Content-Length: 0\r\n", sizeof("Content-Length: 0\r\n"), 0);								
+				break;               
+			}
+
+			//FFC run
+			if(strncmp(request->content, "/ffc=run", strlen("/ffc=run")) == 0) {
+				doFFC();
+				send(filedes, http_header_ok, sizeof(http_header_ok), 0);	
+				send(filedes, "Content-Length: 0\r\n", sizeof("Content-Length: 0\r\n"), 0);					
 				break;               
 			}
 			
@@ -440,6 +594,21 @@ static const char *strnchr(const char *str, size_t len, char c)
    return NULL;
 }
 
+static int isPacketValid(uint8_t *pos) {
+	int i;
+	uint16_t val;
+
+	for(i = 4; i < VOSPI_FRAME_SIZE; i+=2)
+	{
+		val = (pos[i] << 8 | pos[(i + 1)]);
+		if(val == 0 || val > 16383) {
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
 int transfer()
 {
     int ret;
@@ -455,7 +624,7 @@ int transfer()
     struct spi_ioc_transfer tr = {
         .tx_buf = (unsigned long)NULL,
         .rx_buf = (unsigned long)rx_buf,
-        .len = LEP_SPI_BUFFER,
+        .len = VOSPI_FRAME_SIZE * 240,//LEP_SPI_BUFFER,
         .delay_usecs = delay,
         .speed_hz = speed,
         .bits_per_word = bits
@@ -500,7 +669,11 @@ int transfer()
         
         if(!state) {
             continue;
-        }
+		}
+		
+		if(!isPacketValid(&rx_buf[packet])) {
+			continue;
+		}
 
         for(i = 4; i < VOSPI_FRAME_SIZE; i+=2)
         {
@@ -519,17 +692,56 @@ int transfer()
     return status_bits;
 }
 
+static void getLastImageIndex(void) {
 
-int main (void)
+	char image_name[32];
+
+	image_index = 0;
+
+	do {
+		sprintf(image_name, "%simg_%.4d.json", save_path, image_index++);
+        if (image_index > 9999) 
+        {
+            image_index = 0;
+            break;
+        }
+
+	} while (access(image_name, F_OK) == 0);
+
+	return;
+}
+
+int main(int argc, char *argv[])
 {
 	int sock;
 	fd_set active_fd_set, read_fd_set;
 	int i;
 	struct sockaddr_in clientname;
 	size_t size;
-   struct timeval tv;
+	long int start_time;
+    struct timespec tp;
+    struct timeval tv;
+    long int avg_sample_time = 0;
 	
-    int ret = 0;
+	int ret = 0;
+
+	for(i = 0; i < argc; i++) {
+		if(strstr(argv[i], "-s") || strstr(argv[i], "--save")) {
+			save_data = 1;
+			i++;
+			if(i < argc) {
+				sprintf(save_path, argv[i], strlen(argv[i]));	
+			}
+		}
+		if(strstr(argv[i], "ffc=off")) {
+			disableFFC();
+		}		
+	}
+	
+	if(save_data) {
+		getLastImageIndex();
+		debug("saving data to %s, image index set to %d\n", save_path, image_index);		
+	}
 
     spi_fd = open(device, O_RDWR);
     if (spi_fd < 0)
@@ -588,16 +800,30 @@ int main (void)
 	FD_ZERO (&active_fd_set);
 	FD_SET (sock, &active_fd_set);
      
-    /* wait one second between select blocking calls - 
-	   note: This isn't working on the pi and just loops continuously.  
-	   todo: add a time check/delay to transfer() call in the loop
+    /* every 900000 nanoseconds, we should check for a segment
 	*/
-    tv.tv_sec = 1;
-    tv.tv_usec = 0;
+	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp);
+	start_time = tp.tv_nsec;
+	
+	//do not block
+	tv.tv_sec = 0;
+    tv.tv_usec = 1000;
     
 	while (1)
     {
         transfer();
+		
+		//work-in-progress: wait until we should call transfer by calculating
+		//time between segments ~925000 nano seconds.  Currently not working well. 
+		/*
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp);
+        if((tp.tv_nsec - start_time) > 900000) {
+            transfer();
+            clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp);
+            avg_sample_time = ((avg_sample_time + (tp.tv_nsec - start_time)) / 2);
+			start_time = tp.tv_nsec;
+        }        
+		*/
 		
 		/* look for input on one or more active sockets. */
 		read_fd_set = active_fd_set;
@@ -613,6 +839,7 @@ int main (void)
 			{
 				if (i == sock)
 				{
+				    //debug("avg: %d\n", avg_sample_time);
 					/* Connection request on original socket. */
 					int new;
 					size = sizeof(clientname);
@@ -640,3 +867,4 @@ int main (void)
 		}
 	}
 }
+
