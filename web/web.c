@@ -68,7 +68,7 @@ static uint32_t speed = 20000000;
 static uint16_t delay = 0;
 
 volatile uint8_t status_bits = 0;
-volatile uint32_t avg_rate = 0;
+volatile long int avg_rate = 0;
 volatile uint32_t segment_count = 0;
 
 static int image_index = 0;
@@ -294,7 +294,7 @@ int send_image_data(char *content_request, char *content_type, int sock) {
         pos += sprintf(pos, "]");  //end of row
     }
 	
-	pos += sprintf(pos,"], \"segment_count\": %d, \"avg_rate\": %d }", segment_count, avg_rate);
+	pos += sprintf(pos,"], \"segment_count\": %d, \"avg_rate\": %ld }", segment_count, avg_rate);
 
 
 	send(sock, http_header_ok, sizeof(http_header_ok), 0);	
@@ -518,7 +518,8 @@ int transfer()
     int ip;
     uint8_t packet_number = 0;
     uint8_t segment = 0;
-    uint8_t current_segment = 0;
+	uint8_t current_segment = 0;
+	uint8_t frames = 0;
     int packet = 0;
     int state = 0;  //set to 1 when a valid segment is found
     int pixel = 0;
@@ -539,8 +540,14 @@ int transfer()
     if (ret < 1) {
         pabort("can't read spi data");
     }
-    
-    for(ip = 0; ip < (ret / VOSPI_FRAME_SIZE); ip++) {
+	
+	frames = (ret / VOSPI_FRAME_SIZE);
+	if(frames > 720) {
+		frames = 720;
+		debug("Invalid frame count: %d", frames);
+	}
+
+    for(ip = 0; ip < frames; ip++) {
         packet = ip * VOSPI_FRAME_SIZE;
 
         //check for invalid packet number
@@ -725,10 +732,10 @@ int main(int argc, char *argv[])
 		
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp);
         if((tp.tv_nsec - start_time) > 100000) {
-            transfer();
-            clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp);
+            //clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp);
             avg_rate = ((avg_rate + (tp.tv_nsec - start_time)) / 2);
 			start_time = tp.tv_nsec;
+			transfer();
         }        
 		
 		
