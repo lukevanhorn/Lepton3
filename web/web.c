@@ -68,8 +68,8 @@ static uint32_t speed = 20000000;
 static uint16_t delay = 0;
 
 volatile uint8_t status_bits = 0;
-volatile double avg_rate = 0;
-volatile uint32_t frame_count = 0;
+volatile uint32_t avg_rate = 0;
+volatile uint32_t segment_count = 0;
 
 static int image_index = 0;
 static int twi_device;
@@ -294,7 +294,7 @@ int send_image_data(char *content_request, char *content_type, int sock) {
         pos += sprintf(pos, "]");  //end of row
     }
 	
-	pos += sprintf(pos,"], \"frame\": %d, \"avg_rage\": %f }", frame_count, avg_rate);
+	pos += sprintf(pos,"], \"segment_count\": %d, \"avg_rate\": %d }", segment_count, avg_rate);
 
 
 	send(sock, http_header_ok, sizeof(http_header_ok), 0);	
@@ -564,7 +564,8 @@ int transfer()
             segment = (rx_buf[packet + (20 * VOSPI_FRAME_SIZE)] & 0x70) >> 4;
             if(segment > 0 && segment < 5 && rx_buf[packet + (20 * VOSPI_FRAME_SIZE) + 1] == 20) {
                 state = 1;
-                current_segment = segment;
+				current_segment = segment;
+				segment_count++;
                 //debug("new segment: %x \n", segment);
             } 
         }
@@ -586,7 +587,6 @@ int transfer()
         if(packet_number == 59) {
             //set the segment status bit
 			status_bits |= ( 0x01 << (current_segment - 1));
-			frame_count++;
         }        
     }
     
@@ -724,7 +724,7 @@ int main(int argc, char *argv[])
 		//time between segments ~925000 nano seconds.  Currently not working well. 
 		
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp);
-        if((tp.tv_nsec - start_time) > 9000000) {
+        if((tp.tv_nsec - start_time) > 100000) {
             transfer();
             clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp);
             avg_rate = ((avg_rate + (tp.tv_nsec - start_time)) / 2);

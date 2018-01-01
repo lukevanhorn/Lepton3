@@ -6,7 +6,7 @@
 		<script type="text/javascript">
 
 			var imageData = [[]];
-			var frame_count = 0;
+			var segment_count = 0;
 			var avg_rate = 0;
 
 			var loading = false;
@@ -28,7 +28,7 @@
 				var seg = Math.round(range / 3);
 				var div = 256 / range;
 				
-				document.getElementById("imageValues").innerHTML = 'min: ' + min + ', max: ' + max + ', range: ' + range + ', div: ' + div + ', frames: ' + frame_count + ', rate: ' + avg_rate;
+				document.getElementById("imageValues").innerHTML = 'min: ' + min + ', max: ' + max + ', range: ' + range + ', div: ' + div + ', segments: ' + segment_count + ', rate: ' + avg_rate;
 
 				var canvas = document.getElementById("leptonCanvas");
 				var ctx = canvas.getContext("2d");
@@ -64,7 +64,7 @@
 							return;
 						}
 						window.imageData = result.data;	
-						window.frame_count = result.frame_count;
+						window.segment_count = result.segment_count;
 						window.avg_rate = result.avg_rate;
 
 						drawImage();					
