@@ -24,11 +24,9 @@
 #include <limits.h>
 #include <sys/time.h>
 #include <time.h>
+#include <sched.h>
 
 #define _DEBUG 1
-
-#define LEP_I2C_DEVICE_ADDRESS 0x2A
-#define I2C_PORT "/dev/i2c-1"
 
 #define WWW_DIR "www"	
 
@@ -82,8 +80,8 @@ int8_t last_packet = -1;
 #define LEP_SPI_BUFFER (118080)
 /* modify /boot/cmdline.txt to include spidev.bufsiz=131072 */
 
-static uint8_t rx_buf[LEP_SPI_BUFFER] = {0};
-static unsigned int lepton_image[240][80];
+volatile uint8_t rx_buf[LEP_SPI_BUFFER] = {0};
+volatile unsigned int lepton_image[240][80];
 
 static int spi_fd;
 
@@ -97,89 +95,6 @@ void debug(const char *fmt, ...)
 
 	va_end(ap);
 #endif
-}
-
-int waitReady(void) {
-    
-    uint8_t status[2] = {0};
-    int status_code = 0;
-	uint8_t booted, boot_mode, busy;
-	booted = 0;
-	busy = 1;
-		
-	while(!booted || busy) {
-		if(write(twi_device, (uint8_t []){0x00, 0x02}, 2) < 0) {
-			printf("Error writing to i2c device\n");
-			abort();
-		}
-
-		if(read(twi_device, status, 2) < 0) {
-			printf("Error reading from status register \n");
-			abort();   	    
-		}
-		
-		status_code = (int)status[0];    
-		booted = ((status[1] & 0x04) >> 2);
-		boot_mode = ((status[1] & 0x02) >> 1);
-		busy = (status[1] & 0x01);
-	}
-    //printf("status code: %d booted: %d boot mode: %d busy: %d %d\n", (int)status[0], ((status[1] & 0x04) >> 2), ((status[1] & 0x02) >> 1), (status[1] & 0x01),  (booted & !busy));
-    
-    return status_code;
-}
-
-void initTWI(void) {
-    
-    twi_device = open(I2C_PORT, O_RDWR);
-
-    if(twi_device < 0) {
-        printf("Error Opening Device %d\n", device);
-        abort();
-    } 
-    
-    if(ioctl(twi_device, I2C_SLAVE, LEP_I2C_DEVICE_ADDRESS) < 0) {
-        printf("Error Connecting to Device %d\n", device);
-        abort();
-    }
-    
-    return;
-}
-
-static void disableFFC(void) {
-
-	initTWI();
-
-	//set the first two data registers to zero (32 bit enum for enable/disable)
-    waitReady();
-    write(twi_device, (uint8_t []){0x00, 0x08, 0x00, 0x00, 0x00, 0x00}, 6);
-	
-	//set the data length to 2 words
-    waitReady();
-    write(twi_device, (uint8_t []){0x00, 0x06, 0x00, 0x02}, 4);
-
-	//set the command register (0x0004) to update FFC settings (module sys 0x0200 + command 0x3C + set 0x1)
-    waitReady();
-    write(twi_device, (uint8_t []){0x00, 0x04, 0x02, 0x3D}, 4);
-    
-	waitReady();
-
-	close(twi_device);
-	
-	return;
-}
-
-static void doFFC(void) {
-
-	initTWI();
-
-	//set the command register (0x0004) to run FFC calibration (module sys 0x0200 + command 0x40 + run 0x2)
-    waitReady();
-    write(twi_device, (uint8_t []){0x00, 0x04, 0x02, 0x42}, 4);
-    
-	waitReady();
-	close(twi_device);
-
-	return;
 }
 
 static void save_sample(void)
@@ -554,22 +469,6 @@ int read_from_client (int filedes)
 				}
 				break;               
 			}
-
-			//FFC disable
-			if(strncmp(request->content, "/ffc=off", strlen("/ffc=off")) == 0) {
-				disableFFC();
-				send(filedes, http_header_ok, sizeof(http_header_ok), 0);	
-				send(filedes, "Content-Length: 0\r\n", sizeof("Content-Length: 0\r\n"), 0);								
-				break;               
-			}
-
-			//FFC run
-			if(strncmp(request->content, "/ffc=run", strlen("/ffc=run")) == 0) {
-				doFFC();
-				send(filedes, http_header_ok, sizeof(http_header_ok), 0);	
-				send(filedes, "Content-Length: 0\r\n", sizeof("Content-Length: 0\r\n"), 0);					
-				break;               
-			}
 			
 			get_content(request->content,request->type, filedes);
 
@@ -725,6 +624,11 @@ int main(int argc, char *argv[])
 	
 	int ret = 0;
 
+	/* set the priority */
+	struct sched_param param;
+	param.sched_priority = sched_get_priority_max(SCHED_FIFO);
+	sched_setscheduler(0, SCHED_FIFO, &param);
+
 	for(i = 0; i < argc; i++) {
 		if(strstr(argv[i], "-s") || strstr(argv[i], "--save")) {
 			save_data = 1;
@@ -732,10 +636,7 @@ int main(int argc, char *argv[])
 			if(i < argc) {
 				sprintf(save_path, argv[i], strlen(argv[i]));	
 			}
-		}
-		if(strstr(argv[i], "ffc=off")) {
-			disableFFC();
-		}		
+		}	
 	}
 	
 	if(save_data) {

@@ -69,34 +69,6 @@
 				xhttp.send();
 			}
 
-			function disableFFC(elem) {
-				elem.setAttribute('disabled', 'disabled');				
-
-				var xhttp = new XMLHttpRequest();
-
-				xhttp.onreadystatechange = function() {
-					if (this.readyState == 4 && this.status == 200) {
-						elem.removeAttribute('disabled');	
-					}
-				};				
-				xhttp.open("GET", "ffc=off", true);
-				xhttp.send();
-			}
-
-			function runFFC(elem) {
-				elem.setAttribute('disabled', 'disabled');
-
-				var xhttp = new XMLHttpRequest();
-
-				xhttp.onreadystatechange = function() {
-					if (this.readyState == 4 && this.status == 200) {
-						elem.removeAttribute('disabled');	
-					}
-				};				
-				xhttp.open("GET", "ffc=off", true);
-				xhttp.send();
-			}
-
 			function init() {
 				setInterval(loadImage, 1000);
 				loadImage();
@@ -108,8 +80,6 @@
 	<canvas id="leptonCanvas" width="640" height="480" style="border:1px solid #999;">
 	</canvas>
 	<div id="imageValues"></div>
-	<button onclick="disableFFC(this);">Disable Auto FFC</button>
-	<button onclick="runFFC(this);">Run FFC</button>	
 	</body>
 </html>
 
