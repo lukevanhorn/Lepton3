@@ -294,7 +294,7 @@ int send_image_data(char *content_request, char *content_type, int sock) {
         pos += sprintf(pos, "]");  //end of row
     }
 	
-	pos += sprintf(pos,"], \"frame\": %d, \"avg_rage\": %d }", frame_count, average_rate);
+	pos += sprintf(pos,"], \"frame\": %d, \"avg_rage\": %f }", frame_count, avg_rate);
 
 
 	send(sock, http_header_ok, sizeof(http_header_ok), 0);	
