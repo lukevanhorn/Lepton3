@@ -66,7 +66,10 @@ static uint8_t mode = SPI_CPOL | SPI_CPHA;
 static uint8_t bits = 8;
 static uint32_t speed = 20000000;
 static uint16_t delay = 0;
-static uint8_t status_bits = 0;
+
+volatile uint8_t status_bits = 0;
+volatile double avg_rate = 0;
+volatile uint32_t frame_count = 0;
 
 static int image_index = 0;
 static int twi_device;
@@ -81,7 +84,7 @@ int8_t last_packet = -1;
 /* modify /boot/cmdline.txt to include spidev.bufsiz=131072 */
 
 volatile uint8_t rx_buf[LEP_SPI_BUFFER] = {0};
-static unsigned int lepton_image[240][80];
+volatile unsigned int lepton_image[240][80];
 
 static int spi_fd;
 
@@ -291,7 +294,7 @@ int send_image_data(char *content_request, char *content_type, int sock) {
         pos += sprintf(pos, "]");  //end of row
     }
 	
-	pos += sprintf(pos,"]}");
+	pos += sprintf(pos,"], \"frame\": %d, \"avg_rage\": %d }", frame_count, average_rate);
 
 
 	send(sock, http_header_ok, sizeof(http_header_ok), 0);	
@@ -582,7 +585,8 @@ int transfer()
         
         if(packet_number == 59) {
             //set the segment status bit
-            status_bits |= ( 0x01 << (current_segment - 1));
+			status_bits |= ( 0x01 << (current_segment - 1));
+			frame_count++;
         }        
     }
     
@@ -708,23 +712,25 @@ int main(int argc, char *argv[])
 	
 	//do not block
 	tv.tv_sec = 0;
-    tv.tv_usec = 1000;
+	tv.tv_usec = 1000;
+	
+	transfer();
     
 	while (1)
     {
-        transfer();
+        //transfer();
 		
 		//work-in-progress: wait until we should call transfer by calculating
 		//time between segments ~925000 nano seconds.  Currently not working well. 
-		/*
+		
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp);
-        if((tp.tv_nsec - start_time) > 900000) {
+        if((tp.tv_nsec - start_time) > 9000000) {
             transfer();
             clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp);
-            avg_sample_time = ((avg_sample_time + (tp.tv_nsec - start_time)) / 2);
+            avg_rate = ((avg_rate + (tp.tv_nsec - start_time)) / 2);
 			start_time = tp.tv_nsec;
         }        
-		*/
+		
 		
 		/* look for input on one or more active sockets. */
 		read_fd_set = active_fd_set;
