@@ -81,7 +81,7 @@ int8_t last_packet = -1;
 /* modify /boot/cmdline.txt to include spidev.bufsiz=131072 */
 
 volatile uint8_t rx_buf[LEP_SPI_BUFFER] = {0};
-volatile unsigned int lepton_image[240][80];
+static unsigned int lepton_image[240][80];
 
 static int spi_fd;
 
@@ -493,7 +493,7 @@ static const char *strnchr(const char *str, size_t len, char c)
    return NULL;
 }
 
-static int isPacketValid(uint8_t *pos) {
+static int isPacketValid(volatile uint8_t *pos) {
 	int i;
 	uint16_t val;
 
