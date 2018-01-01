@@ -542,8 +542,8 @@ int transfer()
     }
 	
 	frames = (ret / VOSPI_FRAME_SIZE);
-	if(frames > 720) {
-		frames = 720;
+	if(frames > 240) {
+		frames = 240;
 		debug("Invalid frame count: %d", frames);
 	}
 
