@@ -52,12 +52,12 @@
 
 				loading = true;
 
+				var resetTimer = setTimeout(function() { loading = false; }, 5000);
+
 				var xhttp = new XMLHttpRequest();
 
 				xhttp.onreadystatechange = function() {
 					if (this.readyState == 4 && this.status == 200) {
-						loading = false;
-
 						var result = JSON.parse(this.responseText);
 						if(!result.data) {
 							return;
@@ -65,7 +65,10 @@
 						window.imageData = result.data;	
 						window.segment_count = result.segment_count;
 
-						drawImage();					
+						drawImage();			
+								
+						clearTimeout(resetTimer);
+						loading = false;
 					}
 				};				
 				xhttp.open("GET", "lepton.json", true);
