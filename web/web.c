@@ -64,7 +64,7 @@ static void pabort(const char *s)
 static const char *device = "/dev/spidev0.1";
 static uint8_t mode = SPI_CPOL | SPI_CPHA;
 static uint8_t bits = 8;
-static uint32_t speed = 20000000;
+static uint32_t speed = 32000000;
 static uint16_t delay = 0;
 
 volatile uint8_t status_bits = 0;
@@ -720,24 +720,19 @@ int main(int argc, char *argv[])
 	//do not block
 	tv.tv_sec = 0;
 	tv.tv_usec = 1000;
-	
-	//transfer();
     
 	while (1)
-    {
-        transfer();
-		
-		//work-in-progress: wait until we should call transfer by calculating
-		//time between segments ~925000 nano seconds. 
+    {	
+		//work-in-progress: delay between transfer attempts
 		/*
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp);
-        if((tp.tv_nsec - start_time) > 100000) {
+        if((tp.tv_nsec - start_time) > 300000) {
             //clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp);
             avg_rate = ((avg_rate + (tp.tv_nsec - start_time)) / 2);
 			start_time = tp.tv_nsec;
 			transfer();
-        }        
-		*/
+		}       
+		*/ 
 		
 		/* look for input on one or more active sockets. */
 		read_fd_set = active_fd_set;
@@ -779,6 +774,8 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
+
+		transfer();		
 	}
 }
 
