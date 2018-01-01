@@ -6,6 +6,8 @@
 		<script type="text/javascript">
 
 			var imageData = [[]];
+			var segment_count = 0;
+
 			var loading = false;
 		
 			function drawImage() {
@@ -25,7 +27,7 @@
 				var seg = Math.round(range / 3);
 				var div = 256 / range;
 				
-				document.getElementById("imageValues").innerHTML = 'min: ' + min + ', max: ' + max + ', range: ' + range + ', div: ' + div;
+				document.getElementById("imageValues").innerHTML = 'min: ' + min + ', max: ' + max + ', range: ' + range + ', div: ' + div + ', segments: ' + segment_count;
 
 				var canvas = document.getElementById("leptonCanvas");
 				var ctx = canvas.getContext("2d");
@@ -50,55 +52,31 @@
 
 				loading = true;
 
+				var resetTimer = setTimeout(function() { loading = false; }, 5000);
+
 				var xhttp = new XMLHttpRequest();
 
 				xhttp.onreadystatechange = function() {
 					if (this.readyState == 4 && this.status == 200) {
-						loading = false;
-
 						var result = JSON.parse(this.responseText);
 						if(!result.data) {
 							return;
 						}
 						window.imageData = result.data;	
+						window.segment_count = result.segment_count;
 
-						drawImage();					
+						drawImage();			
+								
+						clearTimeout(resetTimer);
+						loading = false;
 					}
 				};				
 				xhttp.open("GET", "lepton.json", true);
 				xhttp.send();
 			}
 
-			function disableFFC(elem) {
-				elem.setAttribute('disabled', 'disabled');				
-
-				var xhttp = new XMLHttpRequest();
-
-				xhttp.onreadystatechange = function() {
-					if (this.readyState == 4 && this.status == 200) {
-						elem.removeAttribute('disabled');	
-					}
-				};				
-				xhttp.open("GET", "ffc=off", true);
-				xhttp.send();
-			}
-
-			function runFFC(elem) {
-				elem.setAttribute('disabled', 'disabled');
-
-				var xhttp = new XMLHttpRequest();
-
-				xhttp.onreadystatechange = function() {
-					if (this.readyState == 4 && this.status == 200) {
-						elem.removeAttribute('disabled');	
-					}
-				};				
-				xhttp.open("GET", "ffc=off", true);
-				xhttp.send();
-			}
-
 			function init() {
-				setInterval(loadImage, 1000);
+				setInterval(loadImage, 2000);
 				loadImage();
 			}
 		</script>
@@ -108,8 +86,6 @@
 	<canvas id="leptonCanvas" width="640" height="480" style="border:1px solid #999;">
 	</canvas>
 	<div id="imageValues"></div>
-	<button onclick="disableFFC(this);">Disable Auto FFC</button>
-	<button onclick="runFFC(this);">Run FFC</button>	
 	</body>
 </html>
 
